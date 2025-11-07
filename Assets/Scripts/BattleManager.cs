@@ -5,9 +5,12 @@ public class BattleManager : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private HexGrid hexGrid;
-    [SerializeField] private HexMapCamera hexMapCamera; // Исправили на HexMapCamera
+    [SerializeField] private HexMapCamera hexMapCamera;
 
     [Header("Battle Settings")]
+
+    [SerializeField] private GameObject playerUnitPrefab;
+	[SerializeField] private GameObject enemyUnitPrefab;
 
     private BattleConfig battleConfig;
 
@@ -149,27 +152,49 @@ public class BattleManager : MonoBehaviour
 
     private void SpawnUnitAt(UnitType unitType, HexCell cell, bool isPlayerUnit)
     {
-        // Временная реализация - создаем простой куб
-        GameObject unit = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        if (cell == null)
+        {
+            Debug.LogError("Попытка создать юнита в null клетке!");
+            return;
+        }
 
-        // Получаем позицию ячейки (метод может отличаться в зависимости от версии туториала)
-        unit.transform.position = cell.Position + Vector3.up * 1f; // Немного выше ячейки
+        // Проверяем, не занята ли уже клетка
+        if (cell.Unit != null)
+        {
+            Debug.LogWarning($"Клетка {cell.Position} уже занята юнитом {cell.Unit.name}");
+            return;
+        }
 
-        unit.transform.localScale = new Vector3(0.8f, 1f, 0.8f);
+        // Используем префаб с BattleHexUnit
+        GameObject unitPrefab = isPlayerUnit ? playerUnitPrefab : enemyUnitPrefab;
+        
+        if (unitPrefab == null)
+        {
+            Debug.LogError("Префаб юнита не назначен!");
+            return;
+        }
 
-        // Разный цвет для игрока и врага
-        Renderer renderer = unit.GetComponent<Renderer>();
-        renderer.material.color = isPlayerUnit ? Color.blue : Color.red;
+        // Создаем экземпляр юнита
+        GameObject unitInstance = Instantiate(unitPrefab);
+        BattleHexUnit battleUnit = unitInstance.GetComponent<BattleHexUnit>();
+        
+        if (battleUnit == null)
+        {
+            Debug.LogError("Префаб не содержит компонент BattleHexUnit!");
+            Destroy(unitInstance);
+            return;
+        }
 
-        // Добавляем компонент юнита
-        BattleUnit battleUnit = unit.AddComponent<BattleUnit>();
-        battleUnit.currentCell = cell;
+        // ВАЖНО: Используем метод AddUnit из HexGrid для правильного размещения
+        hexGrid.AddUnit(battleUnit, cell, Random.Range(0f, 360f));
+        
+        // Настраиваем тег и имя
+        unitInstance.name = isPlayerUnit ? "PlayerUnit" : "EnemyUnit";
+        unitInstance.tag = isPlayerUnit ? "PlayerUnit" : "EnemyUnit";
 
-        // Помечаем ячейку как занятую (если есть такое свойство в туториале)
-        // cell.Unit = battleUnit; // Раскомментировать, если свойство существует
-
-        unit.name = isPlayerUnit ? "PlayerUnit" : "EnemyUnit";
+        Debug.Log($"Создан юнит {unitInstance.name} в клетке {cell.Position}");
     }
+
 
     private List<HexCell> GetPlayerStartPositions()
     {
