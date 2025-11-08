@@ -10,6 +10,8 @@ public class BattleTurnManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private HexGrid hexGrid;
 
+    private HexCell previouslyHighlightedCell;
+
     private List<BattleHexUnit> playerUnits = new List<BattleHexUnit>();
     private List<BattleHexUnit> enemyUnits = new List<BattleHexUnit>();
 
@@ -19,6 +21,11 @@ public class BattleTurnManager : MonoBehaviour
 
     public static BattleTurnManager Instance { get; private set; }
     public bool IsPlayerTurn => isPlayerTurn;
+
+    // События для UI
+    public event System.Action OnUnitsInitialized;
+    public event System.Action<BattleHexUnit> OnActiveUnitChanged;
+    public event System.Action<bool> OnTurnChanged; // true - player, false - enemy
 
     void Awake()
     {
@@ -42,6 +49,10 @@ public class BattleTurnManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f); // Ждем инициализации карты
 
         FindAllUnits();
+        
+        // Уведомляем UI что юниты готовы
+        OnUnitsInitialized?.Invoke();
+
         StartPlayerTurn();
     }
 
@@ -104,9 +115,17 @@ public class BattleTurnManager : MonoBehaviour
             currentUnitIndex++;
             StartNextUnitTurn();
             return;
+        } else
+        {
+            
+            SelectPlayerUnit(currentUnitIndex);
         }
 
         currentActiveUnit.StartBattleTurn();
+
+        // Уведомляем UI о смене активного юнита
+        OnActiveUnitChanged?.Invoke(currentActiveUnit);
+        OnTurnChanged?.Invoke(isPlayerTurn);
 
         if (!isPlayerTurn)
         {
@@ -120,40 +139,6 @@ public class BattleTurnManager : MonoBehaviour
     {
         yield return new WaitForSeconds(1f);
         EndCurrentUnitTurn();
-
-        // BattleHexUnit nearestPlayer = FindNearestPlayerUnit();
-
-        // if (nearestPlayer != null)
-        // {
-        //     // Находим лучшую позицию для атаки
-        //     HexCell bestMoveCell = FindBestMovePosition(nearestPlayer.Location);
-
-        //     if (bestMoveCell != null && bestMoveCell != currentActiveUnit.Location)
-        //     {
-        //         currentActiveUnit.BattleMoveTo(bestMoveCell);
-        //         yield return new WaitForSeconds(0.5f);
-        //     }
-
-        //     // Проверяем возможность атаки
-        //     if (CanAttackTarget(nearestPlayer))
-        //     {
-        //         currentActiveUnit.Attack(nearestPlayer);
-        //         yield return new WaitForSeconds(0.5f);
-        //     }
-        // }
-
-        // EndCurrentUnitTurn();
-    }
-
-    public void EndCurrentUnitTurn()
-    {
-        if (currentActiveUnit != null)
-        {
-            currentActiveUnit.EndBattleTurn();
-        }
-
-        currentUnitIndex++;
-        StartNextUnitTurn();
     }
 
     private void EndTeamTurn()
@@ -195,50 +180,10 @@ public class BattleTurnManager : MonoBehaviour
 
         return nearest;
     }
+    
+    
+    // Методы для UI
 
-    // private HexCell FindBestMovePosition(HexCell targetCell)
-    // {
-    //     // Ищем клетки в радиусе stamina для перемещения к цели
-    //     int searchRadius = currentActiveUnit.currentStamina;
-    //     HexCell bestCell;
-    //     float bestScore = float.MinValue;
-
-    //     // Простой перебор соседних клеток вместо GetCellsInRange
-    //     for (int distance = 1; distance <= searchRadius; distance++)
-    //     {
-    //         foreach (HexCell cell in GetCellsAtDistance(currentActiveUnit.Location, distance))
-    //         {
-    //             if (cell != null && currentActiveUnit.CanMoveTo(cell))
-    //             {
-    //                 float score = CalculateCellScore(cell, targetCell);
-    //                 if (score > bestScore)
-    //                 {
-    //                     bestScore = score;
-    //                     bestCell = cell;
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     return bestCell;
-    // }
-
-
-    // private float CalculateCellScore(HexCell cell, HexCell targetCell)
-    // {
-    //     // Оцениваем клетку по расстоянию до цели
-    //     float distanceScore = 1f / (1f + HexDistance(cell, targetCell));
-        
-    //     return distanceScore;
-    // }
-
-    // private bool CanAttackTarget(BattleHexUnit target)
-    // {
-    //     // Проверяем расстояние для атаки (пока ближний бой - соседние клетки)
-    //     return HexDistance(currentActiveUnit.Location, target.Location) <= 1;
-    // }
-
-    // Метод для вызова из UI или системы ввода
     public void PlayerUnitFinishedTurn()
     {
         if (isPlayerTurn && currentActiveUnit != null)
@@ -246,34 +191,77 @@ public class BattleTurnManager : MonoBehaviour
             EndCurrentUnitTurn();
         }
     }
+    public List<BattleHexUnit> GetPlayerUnits()
+    {
+        return playerUnits;
+    }
+    
+    public BattleHexUnit GetCurrentActiveUnit()
+    {
+        return currentActiveUnit;
+    }
 
-    // private List<HexCell> GetCellsAtDistance(HexCell startCell, int distance)
-    // {
-    //     List<HexCell> result = new List<HexCell>();
+    public void SelectPlayerUnit(int index)
+    {
+        Debug.Log($"SELECTED {index}");
+        if (!isPlayerTurn) return;
 
-    //     // Простая реализация - получаем все клетки и фильтруем по расстоянию
-    //     HexCell[] allCells = FindObjectsOfType<HexCell>();
-    //     foreach (HexCell cell in allCells)
-    //     {
-    //         if (HexDistance(startCell, cell) == distance)
-    //         {
-    //             result.Add(cell);
-    //         }
-    //     }
+        if (index >= 0 && index < playerUnits.Count)
+        {
+            BattleHexUnit unit = playerUnits[index];
 
-    //     return result;
-    // }
+            if (unit.IsAlive)
+            {
+                // Убираем подсветку с предыдущего юнита
+                ClearUnitHighlight();
 
-    // private int HexDistance(HexCell a, HexCell b)
-    // {
-    //     if (a == null || b == null) return int.MaxValue;
+                // Устанавливаем нового активного юнита
+                currentActiveUnit = unit;
+                currentActiveUnit.StartBattleTurn();
 
-    //     HexCoordinates coordA = a.coordinates;
-    //     HexCoordinates coordB = b.coordinates;
+                // Подсвечиваем нового активного юнита
+                HighlightUnit(unit);
 
-    //     return ((Mathf.Abs(coordA.X - coordB.X) +
-    //             Mathf.Abs(coordA.Y - coordB.Y) +
-    //             Mathf.Abs(coordA.Z - coordB.Z)) / 2);
-    // }
+                // Обновляем индекс для порядка ходов
+                currentUnitIndex = index;
+
+                Debug.Log($"Выбран юнит: {unit.name}");
+
+                // Уведомляем UI о смене активного юнита
+                OnActiveUnitChanged?.Invoke(unit);
+            }
+        }
+    }
+    
+    private void HighlightUnit(BattleHexUnit unit)
+    {
+        if (unit?.Location == null) return;
+        
+        // Подсвечиваем ячейку юнита
+        hexGrid.HighlightUnitCell(unit.Location.Index);
+        previouslyHighlightedCell = unit.Location;
+    }
+    
+    private void ClearUnitHighlight()
+    {
+        // Убираем подсветку с предыдущей ячейки
+        if (previouslyHighlightedCell != null)
+        {
+            hexGrid.DisableHighlight(previouslyHighlightedCell.Index);
+        }
+    }
+    
+    // Обновляем метод EndCurrentUnitTurn
+    public void EndCurrentUnitTurn()
+    {
+        if (currentActiveUnit != null)
+        {
+            currentActiveUnit.EndBattleTurn();
+            ClearUnitHighlight();
+        }
+        
+        currentUnitIndex++;
+        StartNextUnitTurn();
+    }
 
 }

@@ -585,7 +585,7 @@ public class HexGrid : MonoBehaviour
 	void SetLabel(int cellIndex, string text) =>
 		cellUIRects[cellIndex].GetComponent<Text>().text = text;
 
-	void DisableHighlight(int cellIndex) =>
+	public void DisableHighlight(int cellIndex) =>
 		cellUIRects[cellIndex].GetChild(0).GetComponent<Image>().enabled =
 			false;
 
@@ -639,6 +639,11 @@ public class HexGrid : MonoBehaviour
 		EnableHighlight(currentPathToIndex, Color.red);
 	}
 
+	public void HighlightUnitCell(int index)
+    {
+		EnableHighlight(index, Color.green);
+    }
+
 	/// <summary>
 	/// Try to find a path.
 	/// </summary>
@@ -647,6 +652,10 @@ public class HexGrid : MonoBehaviour
 	/// <param name="unit">Unit for which the path is.</param>
 	public void FindPath(HexCell fromCell, HexCell toCell, HexUnit unit)
 	{
+		if (currentPathFromIndex == fromCell.Index && currentPathToIndex == toCell.Index)
+		{
+			return;
+        }
 		ClearPath();
 		currentPathFromIndex = fromCell.Index;
 		currentPathToIndex = toCell.Index;

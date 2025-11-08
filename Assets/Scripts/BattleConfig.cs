@@ -13,8 +13,8 @@ public enum MapSize
 public class BattleConfig
 {
     public MapSize mapSize = MapSize.Small;
-    public int playerUnitsCount = 1;
-    public int enemyUnitsCount = 1;
+    public int playerUnitsCount = 3;
+    public int enemyUnitsCount = 3;
 
     public bool enableFogOfWar = false;
     public bool enableVisibility = false;

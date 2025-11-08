@@ -30,6 +30,11 @@ public class BattleHexUnit : HexUnit
         }
     }
     private HexGrid _grid;
+    
+    // События для отслеживания изменений
+    public event System.Action<BattleHexUnit> OnHealthChanged;
+    public event System.Action<BattleHexUnit> OnStaminaChanged;
+    public event System.Action<BattleHexUnit> OnUnitDied;
 
 
     // Переопределяем метод для инициализации в битве
@@ -56,6 +61,7 @@ public class BattleHexUnit : HexUnit
     public void ResetStamina()
     {
         currentStamina = maxStamina;
+        OnStaminaChanged?.Invoke(this);
     }
 
     public bool CanMoveTo(HexCell targetCell)
@@ -70,6 +76,12 @@ public class BattleHexUnit : HexUnit
     public void BattleMoveTo(HexCell targetCell)
     {
         if (!CanMoveTo(targetCell)) return;
+
+        int moveCost = CalculateMoveCost(targetCell);
+        currentStamina -= moveCost;
+
+        // Уведомляем об изменении стамины
+        OnStaminaChanged?.Invoke(this);
 
         // Используем путь вместо прямой телепортации
         //List<HexCell> path = grid.FindPath(Location, targetCell, this);
@@ -94,12 +106,18 @@ public class BattleHexUnit : HexUnit
         target.TakeDamage(damage);
         currentStamina -= 1;
 
+        // Уведомляем об изменении стамины
+        OnStaminaChanged?.Invoke(this);
+
         Debug.Log($"{name} атаковал {target.name}. Урон: {damage}, Stamina: {currentStamina}");
     }
 
     public void TakeDamage(int damage)
     {
         currentHealth = Mathf.Max(0, currentHealth - damage);
+
+        // Уведомляем об изменении здоровья
+        OnHealthChanged?.Invoke(this);
         Debug.Log($"{name} получил {damage} урона. Здоровье: {currentHealth}");
 
         if (currentHealth <= 0)
@@ -110,6 +128,8 @@ public class BattleHexUnit : HexUnit
 
     private void BattleDie()
     {
+        // Уведомляем о смерти юнита
+        OnUnitDied?.Invoke(this);
         Debug.Log($"{name} погиб в битве!");
 
         Die();
