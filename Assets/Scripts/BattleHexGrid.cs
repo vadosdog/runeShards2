@@ -8,7 +8,9 @@ using System.Collections.Generic;
 /// </summary>
 public class BattleHexGrid : HexGrid
 {
-	private int maxStamina; // Максимальная стамина для текущего поиска пути
+    private int maxStamina; // Максимальная стамина для текущего поиска пути
+
+    public bool PathIsReachable => searchData[currentPathToIndex].distance <= maxStamina;
 
 
 	/// <summary>
@@ -28,7 +30,7 @@ public class BattleHexGrid : HexGrid
 		currentPathToIndex = toCell.Index;
 
 		BattleHexUnit battleUnit = unit as BattleHexUnit;
-		maxStamina = battleUnit?.currentStamina ?? unit.Speed;
+		maxStamina = battleUnit?.currentStamina ?? 5;
 
 		currentPathExists = SearchWithStamina(fromCell, toCell, unit);
         ShowStaminaPath();
@@ -154,47 +156,5 @@ public class BattleHexGrid : HexGrid
         
         // Подсвечиваем стартовую и конечную клетки
         EnableHighlight(currentPathFromIndex, Color.blue);
-        // EnableHighlight(currentPathToIndex, Color.green);
-    }
-
-    /// <summary>
-    /// Получить стоимость пути до указанной клетки
-    /// </summary>
-    public int GetPathCost(HexCell toCell)
-    {
-        if (currentPathExists && toCell.Index == currentPathToIndex)
-        {
-            return searchData[toCell.Index].distance;
-        }
-        return int.MaxValue;
-    }
-
-    /// <summary>
-    /// Проверить, достижима ли клетка в пределах стамины
-    /// </summary>
-    public bool IsCellReachable(HexCell fromCell, HexCell toCell, BattleHexUnit unit)
-    {
-        if (fromCell == null || toCell == null || unit == null)
-            return false;
-
-        // Быстрая проверка - если клетки нет в зоне досягаемости
-        if (!IsInStaminaRange(fromCell, toCell, unit.currentStamina))
-            return false;
-
-        // Полноценный поиск пути
-        FindPath(fromCell, toCell, unit);
-        int pathCost = GetPathCost(toCell);
-        
-        return currentPathExists && pathCost <= unit.currentStamina;
-    }
-
-    /// <summary>
-    /// Быстрая проверка нахождения в зоне досягаемости
-    /// </summary>
-    private bool IsInStaminaRange(HexCell fromCell, HexCell toCell, int stamina)
-    {
-        // Используем манхэттенское расстояние для быстрой оценки
-        int distance = fromCell.Coordinates.DistanceTo(toCell.Coordinates);
-        return distance <= stamina;
     }
 }

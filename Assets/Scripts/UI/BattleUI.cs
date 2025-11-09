@@ -12,7 +12,7 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private TMP_Text staminaText;
     [SerializeField] private TMP_Text unitNameText;
     [SerializeField] private Button endTurnButton;
-	[SerializeField] HexGrid grid;
+	[SerializeField] BattleHexGrid grid;
 
     private List<Button> unitButtons = new List<Button>();
     private BattleTurnManager turnManager;
@@ -46,7 +46,7 @@ public class BattleUI : MonoBehaviour
 		{
 			if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
 			{
-				if (Input.GetMouseButtonDown(1))
+				if (Input.GetMouseButtonDown(0))
 				{
 					DoMove();
 				}
@@ -276,8 +276,14 @@ public class BattleUI : MonoBehaviour
     {
         if (grid.HasPath)
         {
-            selectedUnit.Travel(grid.GetPath());
-            grid.ClearPath();
+            if (grid.PathIsReachable)
+            {
+                selectedUnit.Travel(grid.GetPath());
+                grid.ClearPath();
+            } else
+            {
+                Debug.Log("Is not Reachable");
+            }
         }
     }
     
