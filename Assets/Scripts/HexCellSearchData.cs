@@ -32,5 +32,5 @@ public struct HexCellSearchData
 	/// <summary>
 	/// Search priority used by pathfinding algorithm.
 	/// </summary>
-	public readonly int SearchPriority => distance + heuristic;
+	public readonly int SearchPriority => (distance * 5) + heuristic;
 }

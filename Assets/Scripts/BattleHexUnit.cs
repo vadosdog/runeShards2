@@ -9,8 +9,8 @@ public class BattleHexUnit : HexUnit
     public int currentHealth = 100;
     public int attack = 10;
     public int defense = 5;
-    public int maxStamina = 5;
-    public int currentStamina = 5;
+    public int maxStamina = 10;
+    public int currentStamina = 10;
     
     [Header("Battle Visuals")]
     public GameObject selectionHighlight;
@@ -151,6 +151,38 @@ public class BattleHexUnit : HexUnit
         // или создаем упрощенную версию для битвы
         return GetMoveCost(Location, targetCell, (HexDirection)Random.Range(0, 6));
     }
+
+    public override int GetMoveCost(
+		HexCell fromCell, HexCell toCell, HexDirection direction)
+	{
+		if (!IsValidDestination(toCell))
+		{
+			return -1;
+		}
+		HexEdgeType edgeType = HexMetrics.GetEdgeType(
+			fromCell.Values.Elevation, toCell.Values.Elevation);
+		if (edgeType == HexEdgeType.Cliff)
+		{
+			return -1;
+		}
+		int moveCost;
+		if (fromCell.Flags.HasRoad(direction))
+		{
+			moveCost = 1;
+		}
+		else if (fromCell.Flags.HasAny(HexFlags.Walled) !=
+			toCell.Flags.HasAny(HexFlags.Walled))
+		{
+			return -1;
+		}
+		else
+        {
+			moveCost = edgeType == HexEdgeType.Flat ? 1 : 2;
+			HexValues v = toCell.Values;
+			moveCost += v.UrbanLevel + v.FarmLevel + v.PlantLevel;
+		}
+		return moveCost;
+	}
 
     private void ShowSelectionHighlight(bool show)
     {

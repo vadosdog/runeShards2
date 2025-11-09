@@ -21,7 +21,7 @@ public class HexGrid : MonoBehaviour
 	Texture2D noiseSource;
 
 	[SerializeField]
-	int seed;
+	protected int seed;
 
 	/// <summary>
 	/// Amount of cells in the X dimension.
@@ -65,7 +65,7 @@ public class HexGrid : MonoBehaviour
 	public HexUnit[] CellUnits
 	{ get; private set; }
 
-	HexCellSearchData[] searchData;
+	protected HexCellSearchData[] searchData;
 
 	/// <summary>
 	/// Search data array usable for current map.
@@ -86,14 +86,14 @@ public class HexGrid : MonoBehaviour
 
 	int chunkCountX, chunkCountZ;
 
-	HexCellPriorityQueue searchFrontier;
+	protected HexCellPriorityQueue searchFrontier;
 
-	int searchFrontierPhase;
+	protected int searchFrontierPhase;
 
-	int currentPathFromIndex = -1, currentPathToIndex = -1;
-	bool currentPathExists;
+	protected int currentPathFromIndex = -1, currentPathToIndex = -1;
+	protected bool currentPathExists;
 
-	int currentCenterColumnIndex = -1;
+	protected int currentCenterColumnIndex = -1;
 
 #pragma warning disable IDE0044 // Add readonly modifier
 	List<HexUnit> units = new();
@@ -582,14 +582,14 @@ public class HexGrid : MonoBehaviour
 		return path;
 	}
 
-	void SetLabel(int cellIndex, string text) =>
+	protected void SetLabel(int cellIndex, string text) =>
 		cellUIRects[cellIndex].GetComponent<Text>().text = text;
 
 	public void DisableHighlight(int cellIndex) =>
 		cellUIRects[cellIndex].GetChild(0).GetComponent<Image>().enabled =
 			false;
 
-	void EnableHighlight(int cellIndex, Color color)
+	protected void EnableHighlight(int cellIndex, Color color)
 	{
 		Image highlight =
 			cellUIRects[cellIndex].GetChild(0).GetComponent<Image>();
@@ -622,7 +622,7 @@ public class HexGrid : MonoBehaviour
 		currentPathFromIndex = currentPathToIndex = -1;
 	}
 
-	void ShowPath(int speed)
+	protected virtual void ShowPath(int speed)
 	{
 		if (currentPathExists)
 		{
@@ -650,7 +650,7 @@ public class HexGrid : MonoBehaviour
 	/// <param name="fromCell">Cell to start the search from.</param>
 	/// <param name="toCell">Cell to find a path towards.</param>
 	/// <param name="unit">Unit for which the path is.</param>
-	public void FindPath(HexCell fromCell, HexCell toCell, HexUnit unit)
+	public virtual void FindPath(HexCell fromCell, HexCell toCell, HexUnit unit)
 	{
 		if (currentPathFromIndex == fromCell.Index && currentPathToIndex == toCell.Index)
 		{
@@ -663,7 +663,7 @@ public class HexGrid : MonoBehaviour
 		ShowPath(unit.Speed);
 	}
 
-	bool Search(HexCell fromCell, HexCell toCell, HexUnit unit)
+	protected virtual bool Search(HexCell fromCell, HexCell toCell, HexUnit unit)
 	{
 		int speed = unit.Speed;
 		searchFrontierPhase += 2;

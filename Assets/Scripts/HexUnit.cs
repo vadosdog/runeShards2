@@ -216,7 +216,7 @@ public class HexUnit : MonoBehaviour
 	/// <param name="toCell">Cell to move to.</param>
 	/// <param name="direction">Movement direction.</param>
 	/// <returns></returns>
-	public int GetMoveCost(
+	public virtual int GetMoveCost(
 		HexCell fromCell, HexCell toCell, HexDirection direction)
 	{
 		if (!IsValidDestination(toCell))
