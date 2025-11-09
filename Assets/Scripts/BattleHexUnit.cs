@@ -20,16 +20,16 @@ public class BattleHexUnit : HexUnit
     public bool IsActive { get; set; }
     public bool IsAlive => currentHealth > 0;
 
-    private HexGrid grid
+    private BattleHexGrid grid
     {
         get
         {
             if (_grid == null)
-                _grid = FindFirstObjectByType<HexGrid>();
+                _grid = FindFirstObjectByType<BattleHexGrid>();
             return _grid;
         }
     }
-    private HexGrid _grid;
+    private BattleHexGrid _grid;
     
     // События для отслеживания изменений
     public event System.Action<BattleHexUnit> OnHealthChanged;
@@ -64,36 +64,16 @@ public class BattleHexUnit : HexUnit
         OnStaminaChanged?.Invoke(this);
     }
 
-    public bool CanMoveTo(HexCell targetCell)
+    public void BattleMoveTo()
     {
-        if (!IsActive || !IsAlive) return false;
-        
-        // Проверяем стоимость перемещения
-        int moveCost = CalculateMoveCost(targetCell);
-        return moveCost <= currentStamina && IsValidDestination(targetCell);
-    }
+        if (!grid.HasPath) return;
 
-    public void BattleMoveTo(HexCell targetCell)
-    {
-        if (!CanMoveTo(targetCell)) return;
-
-        int moveCost = CalculateMoveCost(targetCell);
+        int moveCost = grid.MoveCost;
+        Travel(grid.GetPath());
         currentStamina -= moveCost;
 
         // Уведомляем об изменении стамины
         OnStaminaChanged?.Invoke(this);
-
-        // Используем путь вместо прямой телепортации
-        //List<HexCell> path = grid.FindPath(Location, targetCell, this);
-        grid.FindPath(Location, targetCell, this);
-        // if (path != null && path.Count > 0)
-        // {
-        //     int moveCost = path.Count; // Упрощенная стоимость
-        //     currentStamina -= moveCost;
-            
-        //     // Используем оригинальный метод Travel
-        // }
-        Travel(grid.GetPath());
         
         Debug.Log($"{name} переместился. Stamina: {currentStamina}");
     }

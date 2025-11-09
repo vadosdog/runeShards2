@@ -278,7 +278,7 @@ public class BattleUI : MonoBehaviour
         {
             if (grid.PathIsReachable)
             {
-                selectedUnit.Travel(grid.GetPath());
+                selectedUnit.BattleMoveTo();
                 grid.ClearPath();
             } else
             {

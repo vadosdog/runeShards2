@@ -10,7 +10,9 @@ public class BattleHexGrid : HexGrid
 {
     private int maxStamina; // Максимальная стамина для текущего поиска пути
 
-    public bool PathIsReachable => searchData[currentPathToIndex].distance <= maxStamina;
+    public bool PathIsReachable => HasPath ? searchData[currentPathToIndex].distance <= maxStamina : false;
+
+    public int MoveCost => this.HasPath ? this.searchData[this.currentPathToIndex].distance : -1;
 
 
 	/// <summary>
