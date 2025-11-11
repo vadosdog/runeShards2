@@ -57,11 +57,11 @@ public class BattleUI : MonoBehaviour
 			}
             else
             {
-                grid.ClearPath();
+                ClearPath();
             }
 		} else
         {
-            grid.ClearPath();
+            ClearPath();
         }
 	}
 
@@ -123,11 +123,19 @@ public class BattleUI : MonoBehaviour
         // Отписываемся от предыдущего юнита
         UnsubscribeFromUnitEvents();
 
-        if (unit == null) {
+        if (unit == null)
+        {
             selectedUnit = null;
             return;
         }
-        
+
+
+        // Зарнуляем прошлое выделение
+        if (selectedUnit != null)
+        {
+            grid.DisableHighlight(selectedUnit.Location.Index);
+        } 
+
         // Подписываемся на нового активного юнита
         selectedUnit = unit;
         unit.OnStaminaChanged += OnStaminaChanged;
@@ -244,33 +252,42 @@ public class BattleUI : MonoBehaviour
 
     private void OnUnitButtonClick(int unitIndex)
     {
-        Debug.Log($"Клик по кнопке юнита {unitIndex}");
-        turnManager.SelectPlayerUnit(unitIndex);
+        turnManager.SelectUnit(unitIndex);
     }
 
     private void OnEndTurnClick()
     {
-        Debug.Log("Кнопка 'Закончить ход' нажата");
         turnManager.PlayerUnitFinishedTurn();
     }
 
     void DoPathfinding()
-	{
-		if (UpdateCurrentCell())
+    {
+        if (UpdateCurrentCell())
         {
-			if (currentCell && selectedUnit.IsValidDestination(currentCell))
-			{
-				grid.FindPath(selectedUnit.Location, currentCell, selectedUnit);
-			}
-			else
-			{
-				grid.ClearPath();
-			}
-		} else
-        {
-            grid.ClearPath();
+            if (currentCell && selectedUnit.IsValidDestination(currentCell))
+            {
+                grid.FindPath(selectedUnit.Location, currentCell, selectedUnit);
+            }
+            else
+            {
+                ClearPath();
+            }
         }
-	}
+        else
+        {
+            ClearPath();
+        }
+    }
+    
+    void ClearPath()
+    {
+        grid.ClearPath();
+        if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
+        {
+            grid.HighlightUnitCell(selectedUnit.Location.Index);        
+        }
+    
+    }
 
     void DoMove()
     {
@@ -279,7 +296,7 @@ public class BattleUI : MonoBehaviour
             if (grid.PathIsReachable)
             {
                 selectedUnit.BattleMoveTo();
-                grid.ClearPath();
+                ClearPath();
             } else
             {
                 Debug.Log("Is not Reachable");

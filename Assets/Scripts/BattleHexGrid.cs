@@ -31,7 +31,7 @@ public class BattleHexGrid : HexGrid
 		currentPathFromIndex = fromCell.Index;
 		currentPathToIndex = toCell.Index;
 
-		BattleHexUnit battleUnit = unit as BattleHexUnit;
+        BattleHexUnit battleUnit = unit as BattleHexUnit;
 		maxStamina = battleUnit?.currentStamina ?? 5;
 
 		currentPathExists = SearchWithStamina(fromCell, toCell, unit);
@@ -117,46 +117,46 @@ public class BattleHexGrid : HexGrid
         if (currentPathExists)
         {
             int currentIndex = currentPathToIndex;
-			int totalCost = 0;
-			bool firstInRange = true;
-            
+            int totalCost = 0;
+            bool firstInRange = true;
+
             while (currentIndex != currentPathFromIndex)
             {
                 HexCell cell = GetCell(currentIndex);
                 int cellCost = searchData[currentIndex].distance - searchData[searchData[currentIndex].pathFrom].distance;
-				totalCost += cellCost;
+                totalCost += cellCost;
 
-				// Подсвечиваем клетки в зависимости от оставшейся стамины
-				// Так как подсветка идет с 0, то первую (последнюю в пути) мы подсвечиваем зеленым
-				Color pathColor;
-				if (searchData[currentIndex].distance <= maxStamina)
-				{
-					if (firstInRange)
-					{
-						firstInRange = false;
-						pathColor = Color.green;
-					}
-					else
+                // Подсвечиваем клетки в зависимости от оставшейся стамины
+                // Так как подсветка идет с 0, то первую (последнюю в пути) мы подсвечиваем зеленым
+                Color pathColor;
+                if (searchData[currentIndex].distance <= maxStamina)
+                {
+                    if (firstInRange)
+                    {
+                        firstInRange = false;
+                        pathColor = Color.green;
+                    }
+                    else
                     {
                         pathColor = Color.white;
                     }
-				
-				}
-				else
-                {
-					pathColor = Color.gray;
+
                 }
-				///	Color pathColor = searchData[currentIndex].distance <= maxStamina ? Color.white : Color.gray;
+                else
+                {
+                    pathColor = Color.gray;
+                }
+                ///	Color pathColor = searchData[currentIndex].distance <= maxStamina ? Color.white : Color.gray;
                 EnableHighlight(currentIndex, pathColor);
-                
+
                 // Показываем стоимость перемещения до этой клетки
                 SetLabel(currentIndex, searchData[currentIndex].distance.ToString());
-                
+
                 currentIndex = searchData[currentIndex].pathFrom;
             }
         }
-        
+
         // Подсвечиваем стартовую и конечную клетки
-        EnableHighlight(currentPathFromIndex, Color.blue);
+        EnableHighlight(currentPathFromIndex, Color.green);
     }
 }

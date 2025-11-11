@@ -10,8 +10,6 @@ public class BattleTurnManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private HexGrid hexGrid;
 
-    private HexCell previouslyHighlightedCell;
-
     private List<BattleHexUnit> playerUnits = new List<BattleHexUnit>();
     private List<BattleHexUnit> enemyUnits = new List<BattleHexUnit>();
 
@@ -21,6 +19,8 @@ public class BattleTurnManager : MonoBehaviour
 
     public static BattleTurnManager Instance { get; private set; }
     public bool IsPlayerTurn => isPlayerTurn;
+
+    List<BattleHexUnit> currentTeam;
 
     // События для UI
     public event System.Action OnUnitsInitialized;
@@ -52,8 +52,8 @@ public class BattleTurnManager : MonoBehaviour
         
         // Уведомляем UI что юниты готовы
         OnUnitsInitialized?.Invoke();
-
-        StartPlayerTurn();
+        currentTeam = playerUnits; // Устанавливаем команду игрока
+        StartPlayerTurn(); // Начинаем ход игрока
     }
 
     private void FindAllUnits()
@@ -81,27 +81,49 @@ public class BattleTurnManager : MonoBehaviour
     {
         isPlayerTurn = true;
         currentUnitIndex = 0;
+        currentTeam = playerUnits; // Явно устанавливаем команду
+
+        // Восстанавливаем stamina всем юнитам игрока
+        foreach (BattleHexUnit unit in playerUnits)
+        {
+            if (unit.IsAlive) unit.ResetStamina();
+        }
 
         StartNextUnitTurn();
         Debug.Log("=== ХОД ИГРОКА ===");
+        OnTurnChanged?.Invoke(true);
     }
 
     public void StartEnemyTurn()
     {
         isPlayerTurn = false;
         currentUnitIndex = 0;
+        currentTeam = enemyUnits; // Явно устанавливаем команду
+
+        // Восстанавливаем stamina всем юнитам врага
+        foreach (BattleHexUnit unit in enemyUnits)
+        {
+            if (unit.IsAlive) unit.ResetStamina();
+        }
 
         StartNextUnitTurn();
         Debug.Log("=== ХОД ПРОТИВНИКА ===");
+        OnTurnChanged?.Invoke(false);
     }
+
 
     private void StartNextUnitTurn()
     {
-        List<BattleHexUnit> currentTeam = isPlayerTurn ? playerUnits : enemyUnits;
+        // Убедимся что currentTeam установлена
+        if (currentTeam == null)
+        {
+            currentTeam = isPlayerTurn ? playerUnits : enemyUnits;
+        }
 
         // Убираем мертвых юнитов из списка
         currentTeam.RemoveAll(unit => !unit.IsAlive);
 
+        // Если все юниты команды сходили - завершаем ход команды
         if (currentUnitIndex >= currentTeam.Count)
         {
             EndTeamTurn();
@@ -110,23 +132,18 @@ public class BattleTurnManager : MonoBehaviour
 
         currentActiveUnit = currentTeam[currentUnitIndex];
 
+        // Если юнит мертв - пропускаем
         if (!currentActiveUnit.IsAlive)
         {
             currentUnitIndex++;
             StartNextUnitTurn();
             return;
-        } else
-        {
-            
-            SelectPlayerUnit(currentUnitIndex);
         }
 
-        currentActiveUnit.StartBattleTurn();
+        // Активируем юнита
+        SelectUnit(currentUnitIndex);
 
-        // Уведомляем UI о смене активного юнита
-        OnActiveUnitChanged?.Invoke(currentActiveUnit);
-        OnTurnChanged?.Invoke(isPlayerTurn);
-
+        // Если ход врага - запускаем AI
         if (!isPlayerTurn)
         {
             StartCoroutine(EnemyAITurn());
@@ -134,6 +151,7 @@ public class BattleTurnManager : MonoBehaviour
 
         Debug.Log($"Активный юнит: {currentActiveUnit.name}");
     }
+
 
     private IEnumerator EnemyAITurn()
     {
@@ -188,7 +206,7 @@ public class BattleTurnManager : MonoBehaviour
     {
         if (isPlayerTurn && currentActiveUnit != null)
         {
-            EndCurrentUnitTurn();
+            EndTeamTurn();
         }
     }
     public List<BattleHexUnit> GetPlayerUnits()
@@ -201,53 +219,34 @@ public class BattleTurnManager : MonoBehaviour
         return currentActiveUnit;
     }
 
-    public void SelectPlayerUnit(int index)
+    public void SelectUnit(int index)
     {
-        Debug.Log($"SELECTED {index}");
-        if (!isPlayerTurn) return;
+        if (currentTeam == null) return;
 
-        if (index >= 0 && index < playerUnits.Count)
+        if (index >= 0 && index < currentTeam.Count)
         {
-            BattleHexUnit unit = playerUnits[index];
+            BattleHexUnit unit = currentTeam[index];
 
             if (unit.IsAlive)
             {
-                // Убираем подсветку с предыдущего юнита
-                ClearUnitHighlight();
+                // Деактивируем предыдущего активного юнита
+                if (currentActiveUnit != null && currentActiveUnit != unit)
+                {
+                    currentActiveUnit.EndBattleTurn();
+                }
 
                 // Устанавливаем нового активного юнита
                 currentActiveUnit = unit;
                 currentActiveUnit.StartBattleTurn();
 
-                // Подсвечиваем нового активного юнита
-                HighlightUnit(unit);
-
-                // Обновляем индекс для порядка ходов
+                // Обновляем индекс
                 currentUnitIndex = index;
 
                 Debug.Log($"Выбран юнит: {unit.name}");
 
-                // Уведомляем UI о смене активного юнита
+                // Уведомляем UI
                 OnActiveUnitChanged?.Invoke(unit);
             }
-        }
-    }
-    
-    private void HighlightUnit(BattleHexUnit unit)
-    {
-        if (unit?.Location == null) return;
-        
-        // Подсвечиваем ячейку юнита
-        hexGrid.HighlightUnitCell(unit.Location.Index);
-        previouslyHighlightedCell = unit.Location;
-    }
-    
-    private void ClearUnitHighlight()
-    {
-        // Убираем подсветку с предыдущей ячейки
-        if (previouslyHighlightedCell != null)
-        {
-            hexGrid.DisableHighlight(previouslyHighlightedCell.Index);
         }
     }
     
@@ -257,7 +256,6 @@ public class BattleTurnManager : MonoBehaviour
         if (currentActiveUnit != null)
         {
             currentActiveUnit.EndBattleTurn();
-            ClearUnitHighlight();
         }
         
         currentUnitIndex++;

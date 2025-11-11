@@ -49,7 +49,7 @@ MonoBehaviour:
   currentHealth: 100
   attack: 10
   defense: 5
-  maxStamina: 5
+  maxStamina: 10
   currentStamina: 5
   selectionHighlight: {fileID: 0}
   healthBar: {fileID: 0}

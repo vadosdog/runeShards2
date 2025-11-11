@@ -635,8 +635,8 @@ public class HexGrid : MonoBehaviour
 				currentIndex = searchData[currentIndex].pathFrom;
 			}
 		}
-		EnableHighlight(currentPathFromIndex, Color.blue);
-		EnableHighlight(currentPathToIndex, Color.red);
+		HighlightUnitCell(currentPathFromIndex);
+		EnableHighlight(currentPathToIndex, Color.blue);
 	}
 
 	public void HighlightUnitCell(int index)

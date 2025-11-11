@@ -13,7 +13,6 @@ public class BattleHexUnit : HexUnit
     public int currentStamina = 10;
     
     [Header("Battle Visuals")]
-    public GameObject selectionHighlight;
     public GameObject healthBar;
     
     // Свойства для управления состоянием в битве
@@ -41,21 +40,18 @@ public class BattleHexUnit : HexUnit
     protected void Start()
     {
         currentHealth = maxHealth;
-        currentStamina = maxStamina;
+        ResetStamina();
     }
 
     // Боевые методы
     public void StartBattleTurn()
     {
         IsActive = true;
-        ShowSelectionHighlight(true);
-        ResetStamina();
     }
 
     public void EndBattleTurn()
     {
         IsActive = false;
-        ShowSelectionHighlight(false);
     }
 
     public void ResetStamina()
@@ -163,12 +159,6 @@ public class BattleHexUnit : HexUnit
 		}
 		return moveCost;
 	}
-
-    private void ShowSelectionHighlight(bool show)
-    {
-        if (selectionHighlight != null)
-            selectionHighlight.SetActive(show);
-    }
 
     // Визуализация в редакторе для отладки
     void OnDrawGizmosSelected()
