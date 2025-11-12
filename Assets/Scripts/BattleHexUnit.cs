@@ -74,6 +74,7 @@ public class BattleHexUnit : HexUnit
         Debug.Log($"{name} переместился. Stamina: {currentStamina}");
     }
 
+    // TODO переделать
     public void Attack(BattleHexUnit target)
     {
         if (!IsActive || !IsAlive || currentStamina < 1) return;
@@ -88,6 +89,7 @@ public class BattleHexUnit : HexUnit
         Debug.Log($"{name} атаковал {target.name}. Урон: {damage}, Stamina: {currentStamina}");
     }
 
+    // TODO переделать
     public void TakeDamage(int damage)
     {
         currentHealth = Mathf.Max(0, currentHealth - damage);
@@ -102,6 +104,7 @@ public class BattleHexUnit : HexUnit
         }
     }
 
+    // TODO переделать
     private void BattleDie()
     {
         // Уведомляем о смерти юнита
@@ -112,20 +115,13 @@ public class BattleHexUnit : HexUnit
 
         // Визуальные эффекты смерти
         GetComponent<Renderer>().material.color = Color.gray;
-        
+
         // Отключаем коллайдеры
         Collider collider = GetComponent<Collider>();
         if (collider != null)
             collider.enabled = false;
 
         IsActive = false;
-    }
-
-    private int CalculateMoveCost(HexCell targetCell)
-    {
-        // Используем существующую логику расчета стоимости перемещения
-        // или создаем упрощенную версию для битвы
-        return GetMoveCost(Location, targetCell, (HexDirection)Random.Range(0, 6));
     }
 
     public override int GetMoveCost(
@@ -159,18 +155,4 @@ public class BattleHexUnit : HexUnit
 		}
 		return moveCost;
 	}
-
-    // Визуализация в редакторе для отладки
-    void OnDrawGizmosSelected()
-    {
-        if (IsActive && IsAlive)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, 1f);
-            
-            // Показываем текущий stamina радиусом
-            Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(transform.position, currentStamina * 2f);
-        }
-    }
 }
