@@ -9,8 +9,8 @@ public class BattleManager : MonoBehaviour
 
     [Header("Battle Settings")]
 
-    [SerializeField] private GameObject playerUnitPrefab;
-	[SerializeField] private GameObject enemyUnitPrefab;
+    [SerializeField] private GameObject baseUnitPrefab;
+	[SerializeField] private UnitData baseUnitData;
 
     private BattleConfig battleConfig;
 
@@ -24,6 +24,18 @@ public class BattleManager : MonoBehaviour
         {
             battleConfig = new BattleConfig();
             Debug.LogWarning("BattleConfig не найден, использую настройки по умолчанию");
+        }
+
+        if (battleConfig.playerUnits.Count == 0)
+        {
+            // Временно: создаем тестовых юнитов
+            battleConfig.playerUnits.Add(baseUnitData);
+        }
+
+        if (battleConfig.enemyUnits.Count == 0)
+        {
+            // Временно: создаем тестовых юнитов
+            battleConfig.enemyUnits.Add(baseUnitData);
         }
 
         InitializeBattle();
@@ -133,66 +145,52 @@ public class BattleManager : MonoBehaviour
 
     private void SpawnTestUnits()
     {
-        // Получаем стартовые позиции для игрока и врага
+        // Получаем стартовые позиции
         List<HexCell> playerStartPositions = GetPlayerStartPositions();
         List<HexCell> enemyStartPositions = GetEnemyStartPositions();
 
-        // Спавним юнитов игрока
-        for (int i = 0; i < Mathf.Min(battleConfig.playerUnitsCount, playerStartPositions.Count); i++)
+        // Спавним юнитов игрока из BattleConfig
+        for (int i = 0; i < Mathf.Min(battleConfig.playerUnits.Count, playerStartPositions.Count); i++)
         {
-            SpawnUnitAt(UnitType.Tank, playerStartPositions[i], true);
+            SpawnUnitAt(battleConfig.playerUnits[i], playerStartPositions[i], true);
         }
 
-        // Спавним юнитов врага
-        for (int i = 0; i < Mathf.Min(battleConfig.enemyUnitsCount, enemyStartPositions.Count); i++)
+        // Спавним юнитов врага из BattleConfig
+        for (int i = 0; i < Mathf.Min(battleConfig.enemyUnits.Count, enemyStartPositions.Count); i++)
         {
-            SpawnUnitAt(UnitType.Tank, enemyStartPositions[i], false);
+            SpawnUnitAt(battleConfig.enemyUnits[i], enemyStartPositions[i], false);
         }
     }
 
-    private void SpawnUnitAt(UnitType unitType, HexCell cell, bool isPlayerUnit)
+
+    private void SpawnUnitAt(UnitData unitData, HexCell cell, bool isPlayerUnit)
     {
-        if (cell == null)
+        if (cell == null || unitData == null)
         {
-            Debug.LogError("Попытка создать юнита в null клетке!");
+            Debug.LogError("Невалидные данные для создания юнита!");
             return;
         }
 
-        // Проверяем, не занята ли уже клетка
         if (cell.Unit != null)
         {
-            Debug.LogWarning($"Клетка {cell.Position} уже занята юнитом {cell.Unit.name}");
+            Debug.LogWarning($"Клетка {cell.Position} уже занята");
             return;
         }
 
-        // Используем префаб с BattleHexUnit
-        GameObject unitPrefab = isPlayerUnit ? playerUnitPrefab : enemyUnitPrefab;
+        // Используем БАЗОВЫЙ префаб (без специфичных настроек)
+        GameObject unitPrefab = baseUnitPrefab; // Общий префаб для всех юнитов
         
-        if (unitPrefab == null)
-        {
-            Debug.LogError("Префаб юнита не назначен!");
-            return;
-        }
-
-        // Создаем экземпляр юнита
         GameObject unitInstance = Instantiate(unitPrefab);
         BattleHexUnit battleUnit = unitInstance.GetComponent<BattleHexUnit>();
         
-        if (battleUnit == null)
-        {
-            Debug.LogError("Префаб не содержит компонент BattleHexUnit!");
-            Destroy(unitInstance);
-            return;
-        }
-
-        // ВАЖНО: Используем метод AddUnit из HexGrid для правильного размещения
+        // Инициализируем из UnitData
+        battleUnit.InitializeFromUnitData(unitData);
+        
+        // Размещаем на карте
         hexGrid.AddUnit(battleUnit, cell, Random.Range(0f, 360f));
         
-        // Настраиваем тег и имя
-        unitInstance.name = isPlayerUnit ? "PlayerUnit" : "EnemyUnit";
+        unitInstance.name = $"{unitData.unitName} {(isPlayerUnit ? "(Player)" : "(Enemy)")}";
         unitInstance.tag = isPlayerUnit ? "PlayerUnit" : "EnemyUnit";
-
-        Debug.Log($"Создан юнит {unitInstance.name} в клетке {cell.Position}");
     }
 
 

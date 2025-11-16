@@ -4,21 +4,35 @@ using TMPro;
 using System.Collections.Generic;
 using UnityEngine.EventSystems;
 
+public enum ActionMode
+{
+    Move,
+    Action
+}
+
 public class BattleUI : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private Transform unitButtonsPanel;
     [SerializeField] private GameObject unitButtonPrefab;
+    [SerializeField] private Transform skillButtonsPanel;
+    [SerializeField] private GameObject skillButtonPrefab;
     [SerializeField] private TMP_Text staminaText;
     [SerializeField] private TMP_Text unitNameText;
     [SerializeField] private Button endTurnButton;
 	[SerializeField] BattleHexGrid grid;
 
     private List<Button> unitButtons = new List<Button>();
+    private List<Button> skillButtons = new List<Button>();
     private BattleTurnManager turnManager;
     private BattleHexUnit selectedUnit;
 
 	HexCell currentCell;
+    
+    // Режим действия: Move или Action
+    private ActionMode currentMode = ActionMode.Move;
+    // Выбранный навык (null если режим Move)
+    private AbstractBattleSkill selectedSkill = null;
 
     void Start()
     {
@@ -46,22 +60,41 @@ public class BattleUI : MonoBehaviour
 		{
 			if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
 			{
-				if (Input.GetMouseButtonDown(0))
+				if (currentMode == ActionMode.Move)
 				{
-					DoMove();
+					// Режим перемещения
+					if (Input.GetMouseButtonDown(0))
+					{
+						DoMove();
+					}
+					else
+					{
+						DoPathfinding();
+					}
 				}
-				else
-                {
-					DoPathfinding();
+				else if (currentMode == ActionMode.Action && selectedSkill != null)
+				{
+					// Режим действия (навык)
+					if (Input.GetMouseButtonDown(0))
+					{
+						DoAction();
+					}
+					else
+					{
+						DoActionTargeting();
+					}
 				}
 			}
             else
             {
                 ClearPath();
+                ClearActionTargeting();
             }
-		} else
+		} 
+		else
         {
             ClearPath();
+            ClearActionTargeting();
         }
 	}
 
@@ -117,6 +150,73 @@ public class BattleUI : MonoBehaviour
         unit.OnUnitDied += (u) => OnUnitDied(u, button);
     }
 
+    private void InitializeSkillButtons()
+    {
+        // Очищаем панель
+        foreach (Transform child in skillButtonsPanel)
+        {
+            Destroy(child.gameObject);
+        }
+        skillButtons.Clear();
+
+        // Если нет выбранного юнита, выходим
+        if (selectedUnit == null)
+        {
+            return;
+        }
+
+        // Всегда добавляем кнопку Move в начале
+        CreateMoveButton();
+
+        // Получаем навыки выбранного юнита
+        if (selectedUnit.Skills != null && selectedUnit.Skills.Count > 0)
+        {
+            for (int i = 0; i < selectedUnit.Skills.Count; i++)
+            {
+                if (selectedUnit.Skills[i] != null)
+                {
+                    CreateSkillButton(i, selectedUnit.Skills[i]);
+                }
+            }
+        }
+        
+        Debug.Log($"Создано {skillButtons.Count} кнопок навыков для {selectedUnit.name}");
+        
+        // Обновляем подсветку кнопок после создания всех кнопок
+        UpdateSkillButtonsSelection();
+    }
+    
+    private void CreateMoveButton()
+    {
+        GameObject buttonGO = Instantiate(skillButtonPrefab, skillButtonsPanel);
+        Button button = buttonGO.GetComponent<Button>();
+        TMP_Text buttonText = buttonGO.GetComponentInChildren<TMP_Text>();
+        
+        // Выводим название действия
+        buttonText.text = "Move";
+        
+        // Назначаем обработчик клика (индекс -1 для Move)
+        button.onClick.AddListener(() => OnSkillButtonClick(-1));
+
+        skillButtons.Add(button);
+    }
+
+    private void CreateSkillButton(int skillIndex, AbstractBattleSkill skill)
+    {
+        GameObject buttonGO = Instantiate(skillButtonPrefab, skillButtonsPanel);
+        Button button = buttonGO.GetComponent<Button>();
+        TMP_Text buttonText = buttonGO.GetComponentInChildren<TMP_Text>();
+        
+        // Выводим название навыка
+        buttonText.text = skill.skillName;
+        
+        // Назначаем обработчик клика
+        int index = skillIndex;
+        button.onClick.AddListener(() => OnSkillButtonClick(index));
+
+        skillButtons.Add(button);
+    }
+
     private void OnActiveUnitChanged(BattleHexUnit unit)
     {
         
@@ -126,6 +226,8 @@ public class BattleUI : MonoBehaviour
         if (unit == null)
         {
             selectedUnit = null;
+            // Очищаем кнопки навыков при отсутствии выбранного юнита
+            InitializeSkillButtons();
             return;
         }
 
@@ -147,6 +249,12 @@ public class BattleUI : MonoBehaviour
         
         // Подсвечиваем активную кнопку
         UpdateUnitButtonsSelection(unit);
+        
+        // Обновляем кнопки навыков для нового выбранного юнита (сначала создаем кнопки)
+        InitializeSkillButtons();
+        
+        // Сбрасываем режим на Move при смене юнита (после создания кнопок, чтобы подсветка работала)
+        SetActionMode(ActionMode.Move);
     }
 
     private void OnStaminaChanged(BattleHexUnit unit)
@@ -217,6 +325,27 @@ public class BattleUI : MonoBehaviour
         }
     }
 
+
+
+
+    private void UpdateSkillButtonVisual(Button button, BattleHexUnit unit)
+    {
+        // Меняем визуал кнопки в зависимости от состояния юнита
+        Image buttonImage = button.GetComponent<Image>();
+        if (buttonImage != null)
+        {
+            if (!unit.IsAlive)
+            {
+                buttonImage.color = Color.gray;
+                button.interactable = false;
+            }
+            else if (unit.currentHealth < unit.maxHealth * 0.3f)
+            {
+                buttonImage.color = Color.red;
+            }
+        }
+    }
+
     private void OnUnitDied(BattleHexUnit unit, Button button)
     {
         UpdateUnitButtonVisual(button, unit);
@@ -253,6 +382,86 @@ public class BattleUI : MonoBehaviour
     private void OnUnitButtonClick(int unitIndex)
     {
         turnManager.SelectUnit(unitIndex);
+    }
+
+    private void OnSkillButtonClick(int skillIndex)
+    {
+        if (selectedUnit == null)
+        {
+            Debug.LogWarning("Нет выбранного юнита для использования навыка");
+            return;
+        }
+
+        // Обработка кнопки Move (индекс -1)
+        if (skillIndex == -1)
+        {
+            SetActionMode(ActionMode.Move);
+            Debug.Log("Выбран режим перемещения");
+            return;
+        }
+
+        // Обработка обычных навыков
+        if (selectedUnit.Skills == null || skillIndex < 0 || skillIndex >= selectedUnit.Skills.Count)
+        {
+            Debug.LogWarning($"Неверный индекс навыка: {skillIndex}");
+            return;
+        }
+
+        AbstractBattleSkill skill = selectedUnit.Skills[skillIndex];
+        if (skill == null)
+        {
+            Debug.LogWarning($"Навык с индексом {skillIndex} не найден");
+            return;
+        }
+
+        // Переключаемся на режим действия с выбранным навыком
+        SetActionMode(ActionMode.Action, skill);
+        Debug.Log($"Выбран навык: {skill.skillName} (индекс: {skillIndex})");
+    }
+    
+    private void SetActionMode(ActionMode mode, AbstractBattleSkill skill = null)
+    {
+        currentMode = mode;
+        selectedSkill = skill;
+        
+        // Очищаем текущее выделение при переключении режима
+        ClearPath();
+        ClearActionTargeting();
+        
+        // Обновляем подсветку кнопок
+        UpdateSkillButtonsSelection();
+    }
+    
+    private void UpdateSkillButtonsSelection()
+    {
+        // Подсвечиваем активную кнопку
+        for (int i = 0; i < skillButtons.Count; i++)
+        {
+            Image buttonImage = skillButtons[i].GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                bool isActive = false;
+                
+                // Кнопка Move (индекс 0)
+                if (i == 0 && currentMode == ActionMode.Move)
+                {
+                    isActive = true;
+                }
+                // Кнопки навыков (индекс i-1 в массиве Skills, т.к. Move на позиции 0)
+                else if (i > 0 && currentMode == ActionMode.Action)
+                {
+                    int skillIndex = i - 1;
+                    if (selectedUnit != null && selectedUnit.Skills != null && 
+                        skillIndex < selectedUnit.Skills.Count && 
+                        selectedUnit.Skills[skillIndex] == selectedSkill)
+                    {
+                        isActive = true;
+                    }
+                }
+                
+                buttonImage.color = isActive ? Color.green : Color.white;
+            }
+        }
     }
 
     private void OnEndTurnClick()
@@ -328,4 +537,123 @@ public class BattleUI : MonoBehaviour
 		}
 		return false;
 	}
+    
+    private HexCell? previousActionTargetCell;
+    
+    void DoAction()
+    {
+        if (selectedSkill == null || selectedUnit == null)
+        {
+            return;
+        }
+        
+        if (!UpdateCurrentCell() || currentCell == null)
+        {
+            return;
+        }
+        
+        // Проверяем, является ли клетка валидной целью для навыка
+        if (!selectedSkill.IsValidTarget(currentCell, selectedUnit))
+        {
+            Debug.LogWarning("Недопустимая цель для навыка");
+            return;
+        }
+        
+        // Выполняем навык
+        SkillResult result = selectedSkill.Execute(currentCell, selectedUnit);
+        
+        if (result.success)
+        {
+            Debug.Log($"Навык {selectedSkill.skillName} успешно применен!");
+            
+            // Очищаем выделение после успешного использования
+            ClearActionTargeting();
+            
+            // Остаемся в режиме действия с тем же навыком
+            // SetActionMode не вызываем, чтобы остался выбранный навык
+        }
+        else
+        {
+            Debug.LogWarning($"Не удалось использовать навык {selectedSkill.skillName}");
+        }
+    }
+    
+    void DoActionTargeting()
+    {
+        if (selectedSkill == null || selectedUnit == null)
+        {
+            ClearActionTargeting();
+            return;
+        }
+        
+        if (UpdateCurrentCell())
+        {
+            if (currentCell != null)
+            {
+                // Очищаем предыдущую подсветку, если клетка изменилась
+                if (previousActionTargetCell != null && previousActionTargetCell.Value != currentCell)
+                {
+                    grid.DisableHighlight(previousActionTargetCell.Value.Index);
+                    selectedSkill.HideTargetingPreview();
+                    
+                    // Если предыдущая ячейка была ячейкой активного юнита, подсвечиваем её снова зеленым
+                    if (previousActionTargetCell.Value == selectedUnit.Location)
+                    {
+                        grid.HighlightUnitCell(selectedUnit.Location.Index);
+                    }
+                }
+                
+                // Проверяем, является ли клетка валидной целью для навыка
+                bool isValidTarget = selectedSkill.IsValidTarget(currentCell, selectedUnit);
+                
+                if (isValidTarget)
+                {
+                    // Подсвечиваем валидную цель
+                    grid.HighlightCell(currentCell.Index, Color.red);
+                    selectedSkill.ShowTargetingPreview(currentCell, selectedUnit);
+                }
+                else
+                {
+                    // Подсвечиваем невалидную цель серым
+                    grid.HighlightCell(currentCell.Index, Color.gray);
+                    selectedSkill.HideTargetingPreview();
+                }
+                
+                previousActionTargetCell = currentCell;
+            }
+            else
+            {
+                ClearActionTargeting();
+            }
+        }
+        else
+        {
+            ClearActionTargeting();
+        }
+    }
+    
+    void ClearActionTargeting()
+    {
+        if (previousActionTargetCell != null)
+        {
+            grid.DisableHighlight(previousActionTargetCell.Value.Index);
+            previousActionTargetCell = null;
+        }
+        
+        if (currentCell != null)
+        {
+            grid.DisableHighlight(currentCell.Index);
+        }
+        
+        if (selectedSkill != null)
+        {
+            selectedSkill.HideTargetingPreview();
+        }
+        
+        // Подсвечиваем позицию юнита, если он есть
+        if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
+        {
+            grid.HighlightUnitCell(selectedUnit.Location.Index);
+        }
+    }
 }

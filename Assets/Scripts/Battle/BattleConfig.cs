@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // Перечисление для размеров карты
 public enum MapSize
@@ -13,11 +14,14 @@ public enum MapSize
 public class BattleConfig
 {
     public MapSize mapSize = MapSize.Small;
-    public int playerUnitsCount = 3;
-    public int enemyUnitsCount = 3;
+    public List<UnitData> playerUnits = new List<UnitData>();
+    public List<UnitData> enemyUnits = new List<UnitData>();
 
     public bool enableFogOfWar = false;
     public bool enableVisibility = false;
+
+    public int playerUnitsCount => playerUnits.Count;
+    public int enemyUnitsCount => enemyUnits.Count;
 
     // Добавим методы для получения реальных размеров
     public int GetGridWidth()

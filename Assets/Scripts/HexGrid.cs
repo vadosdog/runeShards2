@@ -643,6 +643,14 @@ public class HexGrid : MonoBehaviour
     {
 		EnableHighlight(index, Color.green);
     }
+    
+    /// <summary>
+    /// Highlight a cell with a specific color.
+    /// </summary>
+    public void HighlightCell(int index, Color color)
+    {
+        EnableHighlight(index, color);
+    }
 
 	/// <summary>
 	/// Try to find a path.

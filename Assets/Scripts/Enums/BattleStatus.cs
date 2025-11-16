@@ -1,0 +1,1 @@
+public enum StatusType { Burning, Slowed, Stunned, Wet, Shielded, Empowered, Poisoned, Fragile }

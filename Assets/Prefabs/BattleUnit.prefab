@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4421854725932508}
-  - component: {fileID: 291017248091396226}
+  - component: {fileID: 6067269153720453490}
   m_Layer: 0
   m_Name: BattleUnit
   m_TagString: Untagged
@@ -33,7 +33,7 @@ Transform:
   - {fileID: 4173746415363472}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &291017248091396226
+--- !u!114 &6067269153720453490
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,17 +42,21 @@ MonoBehaviour:
   m_GameObject: {fileID: 1716964107277084}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 322817bb2dbc37c1f87704359f5a127c, type: 3}
+  m_Script: {fileID: 11500000, guid: 327845387a1e12b1fb2ef1ade3040855, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleHexUnit
+  Element: 0
   maxHealth: 100
   currentHealth: 100
-  attack: 10
-  defense: 5
   maxStamina: 10
-  currentStamina: 5
-  selectionHighlight: {fileID: 0}
+  currentStamina: 10
+  PhyAtk: 1
+  MagAtk: 1
+  PhyDef: 1
+  MagDef: 1
+  Skills: []
   healthBar: {fileID: 0}
+  unitData: {fileID: 0}
 --- !u!1 &1926056678881898
 GameObject:
   m_ObjectHideFlags: 0

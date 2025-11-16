@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea59e9dad5e17d9de91fa95e824b2d52, type: 3}
+  m_Name: BaseMeleeAttack
+  m_EditorClassIdentifier: Assembly-CSharp::BaseMeleeBattleSkill
+  skillName: Base Melee Attack
+  description: "\u0411\u0430\u0437\u043E\u0432\u0430\u044F \u0430\u0442\u0430\u043A\u0430
+    \u0431\u043B\u0438\u0436\u043D\u044F\u044F"
+  icon: {fileID: 0}
+  staminaCost: 1
+  cooldown: 0
+  targetType: 0
+  minRange: 1
+  maxRange: 1
+  requiresLineOfSight: 0
+  zones:
+  - pattern: {fileID: 11400000, guid: 5f078dceeb6cdb2fea0e1ea5c17c2d73, type: 2}
+    effects:
+    - {fileID: 11400000, guid: 074f597e0cf41450cb5d652d8724ce0b, type: 2}

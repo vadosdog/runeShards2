@@ -115,8 +115,6 @@ public class BattleSettingsManager : MonoBehaviour
 
         if (CurrentConfig == null)
             CurrentConfig = new BattleConfig();
-
-        CurrentConfig.playerUnitsCount = count;
     }
 
     private void UpdateEnemyUnitsCount()
@@ -127,15 +125,15 @@ public class BattleSettingsManager : MonoBehaviour
         if (CurrentConfig == null)
             CurrentConfig = new BattleConfig();
 
-        CurrentConfig.enemyUnitsCount = count;
+        // CurrentConfig.enemyUnitsCount = count;
     }
 
     private void StartBattle()
     {
         Debug.Log("Запуск битвы с настройками:");
         Debug.Log($"Размер карты: {CurrentConfig.mapSize}");
-        Debug.Log($"Юнитов игрока: {CurrentConfig.playerUnitsCount}");
-        Debug.Log($"Юнитов врага: {CurrentConfig.enemyUnitsCount}");
+        // Debug.Log($"Юнитов игрока: {CurrentConfig.playerUnitsCount}");
+        // Debug.Log($"Юнитов врага: {CurrentConfig.enemyUnitsCount}");
 
         // Здесь будет загрузка сцены битвы
         // SceneManager.LoadScene("BattleScene");

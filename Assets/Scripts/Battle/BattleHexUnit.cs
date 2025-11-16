@@ -5,19 +5,30 @@ using System.Collections.Generic;
 public class BattleHexUnit : HexUnit
 {
     [Header("Battle Stats")]
-    public int maxHealth = 100;
     public int currentHealth = 100;
-    public int attack = 10;
-    public int defense = 5;
-    public int maxStamina = 10;
     public int currentStamina = 10;
     
     [Header("Battle Visuals")]
     public GameObject healthBar;
     
+    [Header("Unit Data")]
+    public UnitData unitData;
+    
     // Свойства для управления состоянием в битве
     public bool IsActive { get; set; }
     public bool IsAlive => currentHealth > 0;
+
+
+    public int PhyAtk => unitData?.PhyAtk ?? 1;
+    public int MagAtk => unitData?.MagAtk ?? 1;
+    public int PhyDef => unitData?.PhyDef ?? 1;
+    public int MagDef => unitData?.MagDef ?? 1;
+    public int maxHealth => unitData?.maxHealth ?? 100;
+    public int maxStamina => unitData?.maxStamina ?? 10;
+    public ElementType elementType => unitData?.elementType ?? ElementType.None;
+    public ShapeType shapeType => unitData?.shapeType ?? ShapeType.Beast;
+    public EmotionType emotionType => unitData?.emotionType ?? EmotionType.Rage;
+    public List<AbstractBattleSkill> Skills => unitData?.Skills ?? new List<AbstractBattleSkill>();
 
     private BattleHexGrid grid
     {
@@ -36,11 +47,25 @@ public class BattleHexUnit : HexUnit
     public event System.Action<BattleHexUnit> OnUnitDied;
 
 
-    // Переопределяем метод для инициализации в битве
+    public void InitializeFromUnitData(UnitData data)
+    {
+        if (data == null)
+        {
+            Debug.LogError("UnitData is null");
+            return;
+        }
+
+        unitData = data;
+        
+        currentHealth = data.maxHealth;
+        currentStamina = data.maxStamina;
+        
+        // Настраиваем визуал (если нужно)
+        // GetComponent<MeshRenderer>().material = data.unitMaterial;
+    }
+    
     protected void Start()
     {
-        currentHealth = maxHealth;
-        ResetStamina();
     }
 
     // Боевые методы
@@ -60,33 +85,21 @@ public class BattleHexUnit : HexUnit
         OnStaminaChanged?.Invoke(this);
     }
 
+    public void ConsumeStamina(int amount)
+    {
+        currentStamina = Mathf.Max(0, currentStamina - amount);
+        OnStaminaChanged?.Invoke(this);
+    }
+
     public void BattleMoveTo()
     {
         if (!grid.HasPath) return;
 
         int moveCost = grid.MoveCost;
         Travel(grid.GetPath());
-        currentStamina -= moveCost;
+        ConsumeStamina(moveCost);
 
-        // Уведомляем об изменении стамины
-        OnStaminaChanged?.Invoke(this);
-        
         Debug.Log($"{name} переместился. Stamina: {currentStamina}");
-    }
-
-    // TODO переделать
-    public void Attack(BattleHexUnit target)
-    {
-        if (!IsActive || !IsAlive || currentStamina < 1) return;
-
-        int damage = Mathf.Max(1, attack - target.defense);
-        target.TakeDamage(damage);
-        currentStamina -= 1;
-
-        // Уведомляем об изменении стамины
-        OnStaminaChanged?.Invoke(this);
-
-        Debug.Log($"{name} атаковал {target.name}. Урон: {damage}, Stamina: {currentStamina}");
     }
 
     // TODO переделать
@@ -125,34 +138,39 @@ public class BattleHexUnit : HexUnit
     }
 
     public override int GetMoveCost(
-		HexCell fromCell, HexCell toCell, HexDirection direction)
-	{
-		if (!IsValidDestination(toCell))
-		{
-			return -1;
-		}
-		HexEdgeType edgeType = HexMetrics.GetEdgeType(
-			fromCell.Values.Elevation, toCell.Values.Elevation);
-		if (edgeType == HexEdgeType.Cliff)
-		{
-			return -1;
-		}
-		int moveCost;
-		if (fromCell.Flags.HasRoad(direction))
-		{
-			moveCost = 1;
-		}
-		else if (fromCell.Flags.HasAny(HexFlags.Walled) !=
-			toCell.Flags.HasAny(HexFlags.Walled))
-		{
-			return -1;
-		}
-		else
+        HexCell fromCell, HexCell toCell, HexDirection direction)
+    {
+        if (!IsValidDestination(toCell))
         {
-			moveCost = edgeType == HexEdgeType.Flat ? 1 : 2;
-			HexValues v = toCell.Values;
-			moveCost += v.UrbanLevel + v.FarmLevel + v.PlantLevel;
-		}
-		return moveCost;
-	}
+            return -1;
+        }
+        HexEdgeType edgeType = HexMetrics.GetEdgeType(
+            fromCell.Values.Elevation, toCell.Values.Elevation);
+        if (edgeType == HexEdgeType.Cliff)
+        {
+            return -1;
+        }
+        int moveCost;
+        if (fromCell.Flags.HasRoad(direction))
+        {
+            moveCost = 1;
+        }
+        else if (fromCell.Flags.HasAny(HexFlags.Walled) !=
+            toCell.Flags.HasAny(HexFlags.Walled))
+        {
+            return -1;
+        }
+        else
+        {
+            moveCost = edgeType == HexEdgeType.Flat ? 1 : 2;
+            HexValues v = toCell.Values;
+            moveCost += v.UrbanLevel + v.FarmLevel + v.PlantLevel;
+        }
+        return moveCost;
+    }
+    
+    public bool HasStatus(StatusType statusType)
+    {
+        return false; // Добавить проверку на статусы
+    }
 }
