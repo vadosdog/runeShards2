@@ -89,20 +89,31 @@ public class HexCellShaderData : MonoBehaviour
 	{
 		if (ImmediateMode)
 		{
-		    //TODO когда захочу сделать туман войны раскоментить
-//			cellTextureData[cellIndex].r = Grid.IsCellVisible(cellIndex) ?
-//				(byte)255 : (byte)0;
-//			cellTextureData[cellIndex].g = Grid.CellData[cellIndex].IsExplored ?
-//				(byte)255 : (byte)0;
-		    //TODO убрать, когда захочу сделать туман войны
-			cellTextureData[cellIndex].r = (byte)0;
-			cellTextureData[cellIndex].g = (byte)0;
+			cellTextureData[cellIndex].r = Grid.IsCellVisible(cellIndex) ?
+				(byte)255 : (byte)0;
+			cellTextureData[cellIndex].g = Grid.CellData[cellIndex].IsExplored ?
+				(byte)255 : (byte)0;
 		}
 		else if (!visibilityTransitions[cellIndex])
 		{
 			visibilityTransitions[cellIndex] = true;
 			transitioningCellIndices.Add(cellIndex);
 		}
+		enabled = true;
+	}
+	
+	/// <summary>
+	/// Устанавливает видимость клетки напрямую (для случаев, когда туман войны отключен).
+	/// </summary>
+	/// <param name="cellIndex">Индекс клетки.</param>
+	/// <param name="visible">Видима ли клетка.</param>
+	/// <param name="explored">Исследована ли клетка.</param>
+	public void SetCellVisibility(int cellIndex, bool visible, bool explored)
+	{
+		Color32 data = cellTextureData[cellIndex];
+		data.r = visible ? (byte)255 : (byte)0;
+		data.g = explored ? (byte)255 : (byte)0;
+		cellTextureData[cellIndex] = data;
 		enabled = true;
 	}
 

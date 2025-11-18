@@ -9,11 +9,65 @@ using System.Collections.Generic;
 public class BattleHexGrid : HexGrid
 {
     private int maxStamina; // Максимальная стамина для текущего поиска пути
+    
+    /// <summary>
+    /// Включен ли туман войны. Если false, методы видимости не выполняются.
+    /// </summary>
+    public bool FogOfWarEnabled { get; set; } = false;
 
     public bool PathIsReachable => HasPath ? searchData[currentPathToIndex].distance <= maxStamina : false;
 
     public int MoveCost => this.HasPath ? this.searchData[this.currentPathToIndex].distance : -1;
 
+    protected override float GetElevationStep() => HexMetrics.elevationStep * 2f;
+    
+    /// <summary>
+    /// Переопределяем IncreaseVisibility - не работает, если туман войны отключен.
+    /// </summary>
+    public override void IncreaseVisibility(HexCell fromCell, int range)
+    {
+        if (!FogOfWarEnabled)
+        {
+            return; // Не пересчитываем видимость, если туман войны отключен
+        }
+        base.IncreaseVisibility(fromCell, range);
+    }
+    
+    /// <summary>
+    /// Переопределяем DecreaseVisibility - не работает, если туман войны отключен.
+    /// </summary>
+    public override void DecreaseVisibility(HexCell fromCell, int range)
+    {
+        if (!FogOfWarEnabled)
+        {
+            return; // Не пересчитываем видимость, если туман войны отключен
+        }
+        base.DecreaseVisibility(fromCell, range);
+    }
+    
+    /// <summary>
+    /// Переопределяем ResetVisibility - не работает, если туман войны отключен.
+    /// </summary>
+    public override void ResetVisibility()
+    {
+        if (!FogOfWarEnabled)
+        {
+            return; // Не пересчитываем видимость, если туман войны отключен
+        }
+        base.ResetVisibility();
+    }
+    
+    /// <summary>
+    /// Переопределяем IsCellVisible - всегда возвращает true, если туман войны отключен.
+    /// </summary>
+    public override bool IsCellVisible(int cellIndex)
+    {
+        if (!FogOfWarEnabled)
+        {
+            return true; // Все клетки всегда видимы, если туман войны отключен
+        }
+        return base.IsCellVisible(cellIndex);
+    }
 
 	/// <summary>
 	/// Try to find a path.

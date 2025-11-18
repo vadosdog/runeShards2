@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.IO;
 
 public class BattleManager : MonoBehaviour
 {
@@ -70,13 +71,122 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // Устанавливаем размер карты из конфига
+        // Проверяем, является ли это BattleHexGrid
+        BattleHexGrid battleGrid = hexGrid as BattleHexGrid;
+        if (battleGrid == null)
+        {
+            Debug.LogWarning("HexGrid не является BattleHexGrid. Некоторые функции могут не работать.");
+        }
+
+        // Выбираем режим генерации карты
+        switch (battleConfig.mapGenerationMode)
+        {
+            case MapGenerationMode.Prebuilt:
+                LoadPrebuiltMap();
+                break;
+
+            case MapGenerationMode.Flat:
+                CreateFlatMap();
+                break;
+
+            case MapGenerationMode.Generated:
+            default:
+                CreateGeneratedMap();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Создает карту с автоматической генерацией рельефа.
+    /// </summary>
+    private void CreateGeneratedMap()
+    {
         int width = battleConfig.GetGridWidth();
         int height = battleConfig.GetGridHeight();
 
         hexGrid.CreateMap(width, height, false);
 
-        Debug.Log($"Создана карта размером {width}x{height}");
+        // Генерируем рельеф
+        BattleHexGrid battleGrid = hexGrid as BattleHexGrid;
+        if (battleGrid != null)
+        {
+            BattleMapGenerator.GenerateTerrain(battleGrid);
+            Debug.Log($"Создана карта с рельефом размером {width}x{height}");
+        }
+        else
+        {
+            Debug.LogWarning("Не удалось привести HexGrid к BattleHexGrid для генерации рельефа.");
+        }
+    }
+
+    /// <summary>
+    /// Создает плоскую карту без рельефа.
+    /// </summary>
+    private void CreateFlatMap()
+    {
+        int width = battleConfig.GetGridWidth();
+        int height = battleConfig.GetGridHeight();
+
+        hexGrid.CreateMap(width, height, false);
+        Debug.Log($"Создана плоская карта размером {width}x{height}");
+    }
+
+    /// <summary>
+    /// Загружает предсозданную карту из файловой системы.
+    /// </summary>
+    private void LoadPrebuiltMap()
+    {
+        string mapName = battleConfig.prebuiltMapName;
+        if (string.IsNullOrEmpty(mapName))
+        {
+            Debug.LogWarning("Имя предсозданной карты не указано. Создаю карту с генерацией.");
+            CreateGeneratedMap();
+            return;
+        }
+
+        // Пытаемся загрузить из файловой системы (persistentDataPath)
+        string persistentPath = Path.Combine(Application.persistentDataPath, $"{mapName}.map");
+        if (File.Exists(persistentPath))
+        {
+            LoadMapFromFile(persistentPath);
+            return;
+        }
+
+        // Пытаемся загрузить из StreamingAssets (для предсозданных карт в сборке)
+        string streamingPath = Path.Combine(Application.streamingAssetsPath, "BattleMaps", $"{mapName}.map");
+        if (File.Exists(streamingPath))
+        {
+            LoadMapFromFile(streamingPath);
+            return;
+        }
+
+        // Если карта не найдена, создаем с генерацией
+        Debug.LogWarning($"Предсозданная карта '{mapName}' не найдена в:\n" +
+            $"- {persistentPath}\n" +
+            $"- {streamingPath}\n" +
+            "Создаю карту с генерацией.");
+        CreateGeneratedMap();
+    }
+
+    /// <summary>
+    /// Загружает карту из файла.
+    /// </summary>
+    private void LoadMapFromFile(string path)
+    {
+        try
+        {
+            using (var reader = new BinaryReader(File.OpenRead(path)))
+            {
+                int header = reader.ReadInt32();
+                hexGrid.Load(reader, header);
+                Debug.Log($"Загружена предсозданная карта из файла: {path}");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Ошибка при загрузке карты из {path}: {e.Message}");
+            CreateGeneratedMap();
+        }
     }
 
     private void SetupCamera()
@@ -102,6 +212,12 @@ public class BattleManager : MonoBehaviour
     {
         if (hexGrid != null)
         {
+            BattleHexGrid battleGrid = hexGrid as BattleHexGrid;
+            if (battleGrid != null)
+            {
+                battleGrid.FogOfWarEnabled = battleConfig.enableFogOfWar;
+            }
+            
             if (battleConfig.enableFogOfWar)
             {
                 // Включаем туман войны - используем стандартную систему видимости
@@ -119,21 +235,18 @@ public class BattleManager : MonoBehaviour
 
     private void DisableFogOfWar()
     {
-        // Проходим по всем клеткам и помечаем их как исследованные
+        // Проходим по всем клеткам и помечаем их как исследованные и видимые
         for (int i = 0; i < hexGrid.CellCountX * hexGrid.CellCountZ; i++)
         {
             // Получаем клетку
             HexCell cell = hexGrid.GetCell(i);
 
             // Устанавливаем флаги: Explorable + Explored
-            // В туториале обычно используется cell.Flags для управления состоянием
             cell.Flags = cell.Flags.With(HexFlags.Explorable | HexFlags.Explored);
 
-            // Увеличиваем видимость (это делает клетку видимой)
-            hexGrid.IncreaseVisibility(cell, 0); // Range 0 - только сама клетка
-
-            // Обновляем шейдерные данные для визуализации
-            hexGrid.ShaderData.RefreshVisibility(i);
+            // Устанавливаем видимость в шейдере напрямую
+            // Все клетки видимы и исследованы, когда туман войны отключен
+            hexGrid.ShaderData.SetCellVisibility(i, true, true);
         }
 
         // Принудительно обновляем все чанки
@@ -141,6 +254,9 @@ public class BattleManager : MonoBehaviour
         {
             hexGrid.RefreshCell(i);
         }
+        
+        // Применяем изменения в текстуре
+        hexGrid.ShaderData.enabled = true;
     }
 
     private void SpawnTestUnits()

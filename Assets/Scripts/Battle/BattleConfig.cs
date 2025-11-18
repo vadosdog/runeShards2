@@ -9,6 +9,14 @@ public enum MapSize
     Large    // 20x20
 }
 
+// Режим генерации карты
+public enum MapGenerationMode
+{
+    Generated,   // Генерировать рельеф автоматически
+    Prebuilt,   // Загрузить предсозданную карту
+    Flat        // Плоская карта без рельефа
+}
+
 // Класс для хранения конфигурации битвы
 [System.Serializable]
 public class BattleConfig
@@ -19,6 +27,12 @@ public class BattleConfig
 
     public bool enableFogOfWar = false;
     public bool enableVisibility = false;
+
+    [Header("Map Generation")]
+    public MapGenerationMode mapGenerationMode = MapGenerationMode.Generated;
+    
+    [Tooltip("Имя предсозданной карты (если используется режим Prebuilt). Карта должна быть в Resources/BattleMaps/")]
+    public string prebuiltMapName = "";
 
     public int playerUnitsCount => playerUnits.Count;
     public int enemyUnitsCount => enemyUnits.Count;

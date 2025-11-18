@@ -137,6 +137,34 @@ public class BattleHexUnit : HexUnit
         IsActive = false;
     }
 
+    /// <summary>
+    /// Check whether a cell is a valid destination for the unit.
+    /// Не проверяет флаг Explored, если туман войны отключен.
+    /// </summary>
+    /// <param name="cell">Cell to check.</param>
+    /// <returns>Whether the unit could occupy the cell.</returns>
+    public override bool IsValidDestination(HexCell cell)
+    {
+        // Проверяем, включен ли туман войны
+        bool fogOfWarEnabled = false;
+        if (grid != null)
+        {
+            fogOfWarEnabled = grid.FogOfWarEnabled;
+        }
+        
+        // Если туман войны отключен, не проверяем флаг Explored
+        if (fogOfWarEnabled)
+        {
+            return cell.Flags.HasAll(HexFlags.Explored | HexFlags.Explorable) &&
+                !cell.Values.IsUnderwater && !cell.Unit;
+        }
+        else
+        {
+            return cell.Flags.HasAll(HexFlags.Explorable) &&
+                !cell.Values.IsUnderwater && !cell.Unit;
+        }
+    }
+
     public override int GetMoveCost(
         HexCell fromCell, HexCell toCell, HexDirection direction)
     {
@@ -162,9 +190,18 @@ public class BattleHexUnit : HexUnit
         }
         else
         {
-            moveCost = edgeType == HexEdgeType.Flat ? 1 : 2;
-            HexValues v = toCell.Values;
-            moveCost += v.UrbanLevel + v.FarmLevel + v.PlantLevel;
+            // Базовая стоимость зависит только от направления изменения высоты
+            int elevationDiff = toCell.Values.Elevation - fromCell.Values.Elevation;
+            if (elevationDiff > 0)
+            {
+                // Подъем: стоимость 2
+                moveCost = 2;
+            }
+            else
+            {
+                // Плоская поверхность или спуск: стоимость 1
+                moveCost = 1;
+            }
         }
         return moveCost;
     }

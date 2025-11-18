@@ -73,11 +73,11 @@ public class HexUnit : MonoBehaviour
 		transform.localPosition = Grid.GetCell(locationCellIndex).Position;
 
 	/// <summary>
-	/// Checl whether a cell is a valid destination for the unit.
+	/// Check whether a cell is a valid destination for the unit.
 	/// </summary>
 	/// <param name="cell">Cell to check.</param>
 	/// <returns>Whether the unit could occupy the cell.</returns>
-	public bool IsValidDestination(HexCell cell) =>
+	public virtual bool IsValidDestination(HexCell cell) =>
 		cell.Flags.HasAll(HexFlags.Explored | HexFlags.Explorable) &&
 		!cell.Values.IsUnderwater && !cell.Unit;
 

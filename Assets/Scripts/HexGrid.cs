@@ -365,7 +365,7 @@ public class HexGrid : MonoBehaviour
 	/// </summary>
 	/// <param name="cellIndex">Index of the cell to check.</param>
 	/// <returns>Whether the cell is visible.</returns>
-	public bool IsCellVisible(int cellIndex) => cellVisibility[cellIndex] > 0;
+	public virtual bool IsCellVisible(int cellIndex) => cellVisibility[cellIndex] > 0;
 
 	/// <summary>
 	/// Control whether the map UI should be visible or hidden.
@@ -456,7 +456,7 @@ public class HexGrid : MonoBehaviour
 	public void RefreshCellPosition (int cellIndex)
 	{
 		Vector3 position = CellPositions[cellIndex];
-		position.y = CellData[cellIndex].Elevation * HexMetrics.elevationStep;
+		position.y = CellData[cellIndex].Elevation * GetElevationStep();
 		position.y +=
 			(HexMetrics.SampleNoise(position).y * 2f - 1f) *
 			HexMetrics.elevationPerturbStrength;
@@ -467,6 +467,12 @@ public class HexGrid : MonoBehaviour
 		uiPosition.z = -position.y;
 		rectTransform.localPosition = uiPosition;
 	}
+
+	/// <summary>
+	/// Get elevation step to use for this grid instance.
+	/// Override in derived grids to customize vertical scale.
+	/// </summary>
+	protected virtual float GetElevationStep() => HexMetrics.elevationStep;
 
 	/// <summary>
 	/// Refresh all cells, to be done after generating a map.
@@ -750,7 +756,7 @@ public class HexGrid : MonoBehaviour
 	/// </summary>
 	/// <param name="fromCell">Cell from which to start viewing.</param>
 	/// <param name="range">Visibility range.</param>
-	public void IncreaseVisibility(HexCell fromCell, int range)
+	public virtual void IncreaseVisibility(HexCell fromCell, int range)
 	{
 		List<HexCell> cells = GetVisibleCells(fromCell, range);
 		for (int i = 0; i < cells.Count; i++)
@@ -771,7 +777,7 @@ public class HexGrid : MonoBehaviour
 	/// </summary>
 	/// <param name="fromCell">Cell from which to stop viewing.</param>
 	/// <param name="range">Visibility range.</param>
-	public void DecreaseVisibility(HexCell fromCell, int range)
+	public virtual void DecreaseVisibility(HexCell fromCell, int range)
 	{
 		List<HexCell> cells = GetVisibleCells(fromCell, range);
 		for (int i = 0; i < cells.Count; i++)
@@ -788,7 +794,7 @@ public class HexGrid : MonoBehaviour
 	/// <summary>
 	/// Reset visibility of the entire map, viewing from all units.
 	/// </summary>
-	public void ResetVisibility()
+	public virtual void ResetVisibility()
 	{
 		for (int i = 0; i < cellVisibility.Length; i++)
 		{
