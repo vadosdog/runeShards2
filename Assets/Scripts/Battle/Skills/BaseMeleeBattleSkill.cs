@@ -38,6 +38,18 @@ public class BaseMeleeBattleSkill : AbstractBattleSkill
         if (distance < minRange || distance > maxRange)
             return false;
 
+        // Проверяем разницу высот для ближних атак
+        // BaseMeleeBattleSkill - это всегда ближние атаки, независимо от maxRange
+        // Ближние атаки невозможны, если разница высот >= 2
+        int casterElevation = caster.Location.Values.Elevation;
+        int targetElevation = targetCell.Values.Elevation;
+        int elevationDiff = Mathf.Abs(casterElevation - targetElevation);
+        
+        if (elevationDiff >= 2)
+        {
+            return false; // Ближняя атака невозможна при разнице высот >= 2
+        }
+
         // Проверяем тип цели
         HexUnit targetUnit = targetCell.Unit;
         if (targetUnit == null)
