@@ -41,8 +41,8 @@ public static class BattleCalculator
 
         baseDamage += modifierSum;
 
-        // Не даём урону уйти в отрицательное
-        baseDamage = Mathf.Max(0, baseDamage);
+        // Урон не может быть меньше 1
+        baseDamage = Mathf.Max(1, baseDamage);
 
         return new DamageResult
         {
@@ -79,19 +79,39 @@ public static class BattleCalculator
         return 0;
     }
 
-    // Позиционные модификаторы ===
+    // Позиционные модификаторы (рельеф) ===
     private static int GetHeightModifier(BattleHexUnit caster, BattleHexUnit target, EffectCategory category)
     {
-        return 0; // TODO исправить после реализации рельефа
-        // if (category != EffectCategory.Physical)
-        //     return 0; // Высота влияет только на физический урон
+        // Магические атаки не зависят от рельефа
+        if (category != EffectCategory.Physical)
+        {
+            return 0;
+        }
 
-        // int casterHeight = caster.Cell.Height;
-        // int targetHeight = target.Cell.Height;
+        // Получаем клетки кастера и цели
+        HexCell casterCell = caster.Location;
+        HexCell targetCell = target.Location;
 
-        // if (casterHeight > targetHeight) return +1;
-        // if (casterHeight < targetHeight) return -1;
-        // return 0;
+        // Получаем высоты клеток
+        int casterElevation = casterCell.Values.Elevation;
+        int targetElevation = targetCell.Values.Elevation;
+
+        // Вычисляем разницу высот
+        int elevationDiff = casterElevation - targetElevation;
+
+        // Модификаторы для физических ближних атак:
+        // +1 к атаке сверху вниз (кастер выше цели)
+        // -1 к атаке снизу вверх (кастер ниже цели)
+        if (elevationDiff > 0)
+        {
+            return +1; // Атака сверху вниз
+        }
+        else if (elevationDiff < 0)
+        {
+            return -1; // Атака снизу вверх
+        }
+
+        return 0; // На одной высоте
     }
 
     // Окружение ===
