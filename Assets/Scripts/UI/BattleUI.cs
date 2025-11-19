@@ -47,6 +47,7 @@ public class BattleUI : MonoBehaviour
         // Подписываемся на события
         turnManager.OnUnitsInitialized += InitializeUnitButtons;
         turnManager.OnActiveUnitChanged += OnActiveUnitChanged;
+        turnManager.OnTurnChanged += OnTurnChanged;
 
         endTurnButton.onClick.AddListener(OnEndTurnClick);
 
@@ -54,35 +55,45 @@ public class BattleUI : MonoBehaviour
         SetUnitInfoVisible(false);
     }
     
-    void Update()
-    {
+	void Update()
+	{
 		if (!EventSystem.current.IsPointerOverGameObject())
 		{
-			if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
+			// Проверяем, что выбранный юнит управляется человеком
+			if (selectedUnit != null && turnManager != null)
 			{
-				if (currentMode == ActionMode.Move)
+				var humanControlledUnits = turnManager.GetHumanControlledUnits();
+				if (humanControlledUnits.Contains(selectedUnit))
 				{
-					// Режим перемещения
-					if (Input.GetMouseButtonDown(0))
+					if (currentMode == ActionMode.Move)
 					{
-						DoMove();
+						// Режим перемещения
+						if (Input.GetMouseButtonDown(0))
+						{
+							DoMove();
+						}
+						else
+						{
+							DoPathfinding();
+						}
 					}
-					else
+					else if (currentMode == ActionMode.Action && selectedSkill != null)
 					{
-						DoPathfinding();
+						// Режим действия (навык)
+						if (Input.GetMouseButtonDown(0))
+						{
+							DoAction();
+						}
+						else
+						{
+							DoActionTargeting();
+						}
 					}
 				}
-				else if (currentMode == ActionMode.Action && selectedSkill != null)
+				else
 				{
-					// Режим действия (навык)
-					if (Input.GetMouseButtonDown(0))
-					{
-						DoAction();
-					}
-					else
-					{
-						DoActionTargeting();
-					}
+					ClearPath();
+					ClearActionTargeting();
 				}
 			}
             else
@@ -105,6 +116,7 @@ public class BattleUI : MonoBehaviour
         {
             turnManager.OnUnitsInitialized -= InitializeUnitButtons;
             turnManager.OnActiveUnitChanged -= OnActiveUnitChanged;
+            turnManager.OnTurnChanged -= OnTurnChanged;
         }
         
         // Отписываемся от событий юнитов
@@ -120,15 +132,15 @@ public class BattleUI : MonoBehaviour
         }
         unitButtons.Clear();
 
-        // Получаем юнитов игрока
-        var playerUnits = turnManager.GetPlayerUnits();
+        // Получаем юнитов текущей активной команды, если она управляется человеком
+        var currentTeamUnits = turnManager.GetCurrentTeamHumanControlledUnits();
         
-        for (int i = 0; i < playerUnits.Count; i++)
+        for (int i = 0; i < currentTeamUnits.Count; i++)
         {
-            CreateUnitButton(i, playerUnits[i]);
+            CreateUnitButton(i, currentTeamUnits[i]);
         }
         
-        Debug.Log($"Создано {playerUnits.Count} кнопок юнитов");
+        Debug.Log($"Создано {currentTeamUnits.Count} кнопок юнитов текущей команды (управляемых человеком)");
     }
 
     private void CreateUnitButton(int index, BattleHexUnit unit)
@@ -293,8 +305,8 @@ public class BattleUI : MonoBehaviour
 
     private void UpdateUnitButtonsSelection(BattleHexUnit selectedUnit)
     {
-        var playerUnits = turnManager.GetPlayerUnits();
-        int selectedIndex = playerUnits.IndexOf(selectedUnit);
+        var currentTeamUnits = turnManager.GetCurrentTeamHumanControlledUnits();
+        int selectedIndex = currentTeamUnits.IndexOf(selectedUnit);
         
         for (int i = 0; i < unitButtons.Count; i++)
         {
@@ -381,7 +393,16 @@ public class BattleUI : MonoBehaviour
 
     private void OnUnitButtonClick(int unitIndex)
     {
-        turnManager.SelectUnit(unitIndex);
+        // Получаем список юнитов текущей активной команды, управляемой человеком
+        var currentTeamUnits = turnManager.GetCurrentTeamHumanControlledUnits();
+        
+        if (unitIndex >= 0 && unitIndex < currentTeamUnits.Count)
+        {
+            BattleHexUnit unit = currentTeamUnits[unitIndex];
+            
+            // Используем метод выбора по юниту напрямую
+            turnManager.SelectUnitByUnit(unit);
+        }
     }
 
     private void OnSkillButtonClick(int skillIndex)
@@ -469,6 +490,13 @@ public class BattleUI : MonoBehaviour
     {
         turnManager.PlayerUnitFinishedTurn();
     }
+    
+    private void OnTurnChanged(bool isPlayerTurn)
+    {
+        // При смене хода команды обновляем список кнопок юнитов
+        // (важно, когда обе команды управляются человеком)
+        InitializeUnitButtons();
+    }
 
     void DoPathfinding()
     {
@@ -492,11 +520,14 @@ public class BattleUI : MonoBehaviour
     void ClearPath()
     {
         grid.ClearPath();
-        if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
+        if (selectedUnit != null && turnManager != null)
         {
-            grid.HighlightUnitCell(selectedUnit.Location.Index);        
+            var humanControlledUnits = turnManager.GetHumanControlledUnits();
+            if (humanControlledUnits.Contains(selectedUnit))
+            {
+                grid.HighlightUnitCell(selectedUnit.Location.Index);
+            }
         }
-    
     }
 
     void DoMove()
@@ -704,10 +735,14 @@ public class BattleUI : MonoBehaviour
         // Очищаем траекторию
         ClearTrajectory();
         
-        // Подсвечиваем позицию юнита, если он есть
-        if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
+        // Подсвечиваем позицию юнита, если он есть и управляется человеком
+        if (selectedUnit != null && turnManager != null)
         {
-            grid.HighlightUnitCell(selectedUnit.Location.Index);
+            var humanControlledUnits = turnManager.GetHumanControlledUnits();
+            if (humanControlledUnits.Contains(selectedUnit))
+            {
+                grid.HighlightUnitCell(selectedUnit.Location.Index);
+            }
         }
     }
 }

@@ -27,18 +27,18 @@ public class BattleManager : MonoBehaviour
             Debug.LogWarning("BattleConfig не найден, использую настройки по умолчанию");
         }
 
-        if (battleConfig.playerUnits.Count == 0)
+        if (battleConfig.player1Units.Count == 0)
         {
             // Временно: создаем тестовых юнитов
-            battleConfig.playerUnits.Add(baseUnitData);
-            battleConfig.playerUnits.Add(baseUnitData);
+            battleConfig.player1Units.Add(baseUnitData);
+            battleConfig.player1Units.Add(baseUnitData);
         }
 
-        if (battleConfig.enemyUnits.Count == 0)
+        if (battleConfig.player2Units.Count == 0)
         {
             // Временно: создаем тестовых юнитов
-            battleConfig.enemyUnits.Add(baseUnitData);
-            battleConfig.enemyUnits.Add(baseUnitData);
+            battleConfig.player2Units.Add(baseUnitData);
+            battleConfig.player2Units.Add(baseUnitData);
         }
 
         InitializeBattle();
@@ -264,19 +264,19 @@ public class BattleManager : MonoBehaviour
     private void SpawnTestUnits()
     {
         // Получаем стартовые позиции
-        List<HexCell> playerStartPositions = GetPlayerStartPositions();
-        List<HexCell> enemyStartPositions = GetEnemyStartPositions();
+        List<HexCell> player1StartPositions = GetPlayer1StartPositions();
+        List<HexCell> player2StartPositions = GetPlayer2StartPositions();
 
-        // Спавним юнитов игрока из BattleConfig
-        for (int i = 0; i < Mathf.Min(battleConfig.playerUnits.Count, playerStartPositions.Count); i++)
+        // Спавним юнитов игрока 1 из BattleConfig
+        for (int i = 0; i < Mathf.Min(battleConfig.player1Units.Count, player1StartPositions.Count); i++)
         {
-            SpawnUnitAt(battleConfig.playerUnits[i], playerStartPositions[i], true);
+            SpawnUnitAt(battleConfig.player1Units[i], player1StartPositions[i], true);
         }
 
-        // Спавним юнитов врага из BattleConfig
-        for (int i = 0; i < Mathf.Min(battleConfig.enemyUnits.Count, enemyStartPositions.Count); i++)
+        // Спавним юнитов игрока 2 из BattleConfig
+        for (int i = 0; i < Mathf.Min(battleConfig.player2Units.Count, player2StartPositions.Count); i++)
         {
-            SpawnUnitAt(battleConfig.enemyUnits[i], enemyStartPositions[i], false);
+            SpawnUnitAt(battleConfig.player2Units[i], player2StartPositions[i], false);
         }
     }
 
@@ -312,25 +312,25 @@ public class BattleManager : MonoBehaviour
     }
 
 
-    private List<HexCell> GetPlayerStartPositions()
+    private List<HexCell> GetPlayer1StartPositions()
     {
         List<HexCell> positions = new List<HexCell>();
         int width = battleConfig.GetGridWidth();
         int height = battleConfig.GetGridHeight();
 
-        // Более безопасный способ получения позиций
-        for (int z = 0; z < height; z++)
+        // Используем offset координаты напрямую через GetCellIndex
+        for (int z = 0; z < height && z < hexGrid.CellCountZ; z++)
         {
-            for (int x = 0; x < 2; x++) // Берем только первые 2 колонки
+            for (int x = 0; x < 2 && x < hexGrid.CellCountX; x++) // Берем только первые 2 колонки
             {
-                // Используем правильный способ получения ячейки
-                HexCoordinates coordinates = new HexCoordinates(x, z);
-                HexCell cell = hexGrid.GetCell(coordinates);
+                // Используем прямой способ получения ячейки через offset координаты
+                int cellIndex = hexGrid.GetCellIndex(x, z);
+                HexCell cell = hexGrid.GetCell(cellIndex);
 
-                if (cell != null && IsCellSuitableForSpawn(cell))
+                if (IsCellValid(cell) && IsCellSuitableForSpawn(cell))
                 {
                     positions.Add(cell);
-                    if (positions.Count >= battleConfig.playerUnitsCount)
+                    if (positions.Count >= battleConfig.player1UnitsCount)
                         return positions;
                 }
             }
@@ -339,29 +339,30 @@ public class BattleManager : MonoBehaviour
         return positions;
     }
 
-    private List<HexCell> GetEnemyStartPositions()
+    private List<HexCell> GetPlayer2StartPositions()
     {
         List<HexCell> positions = new List<HexCell>();
         int width = battleConfig.GetGridWidth();
         int height = battleConfig.GetGridHeight();
 
-        // Более безопасный способ получения позиций
-        for (int z = 0; z < height; z++)
+        // Используем offset координаты напрямую через GetCellIndex
+        // Идем сверху вниз (z от height-1 до 0), чтобы спавнить в правом верхнем углу
+        for (int z = Mathf.Min(height - 1, hexGrid.CellCountZ - 1); z >= 0; z--)
         {
-            for (int x = width - 2; x < width; x++) // Берем последние 2 колонки
+            int startX = Mathf.Max(0, Mathf.Min(width - 2, hexGrid.CellCountX - 2));
+            int endX = Mathf.Min(width - 1, hexGrid.CellCountX - 1);
+            
+            for (int x = startX; x <= endX; x++) // Берем последние 2 колонки
             {
-                if (x >= 0) // Проверяем чтобы x не был отрицательным
-                {
-                    // Используем правильный способ получения ячейки
-                    HexCoordinates coordinates = new HexCoordinates(x, z);
-                    HexCell cell = hexGrid.GetCell(coordinates);
+                // Используем прямой способ получения ячейки через offset координаты
+                int cellIndex = hexGrid.GetCellIndex(x, z);
+                HexCell cell = hexGrid.GetCell(cellIndex);
 
-                    if (cell != null && IsCellSuitableForSpawn(cell))
-                    {
-                        positions.Add(cell);
-                        if (positions.Count >= battleConfig.enemyUnitsCount)
-                            return positions;
-                    }
+                if (IsCellValid(cell) && IsCellSuitableForSpawn(cell))
+                {
+                    positions.Add(cell);
+                    if (positions.Count >= battleConfig.player2UnitsCount)
+                        return positions;
                 }
             }
         }
@@ -369,9 +370,18 @@ public class BattleManager : MonoBehaviour
         return positions;
     }
 
+    private bool IsCellValid(HexCell cell)
+    {
+        // Проверяем, что ячейка валидна (не default структура)
+        // В структуре HexCell нет явного способа проверить валидность,
+        // но мы можем проверить индекс
+        int totalCells = hexGrid.CellCountX * hexGrid.CellCountZ;
+        return cell.Index >= 0 && cell.Index < totalCells;
+    }
+
     private bool IsCellSuitableForSpawn(HexCell cell)
     {
-        if (cell == null) return false;
+        if (!IsCellValid(cell)) return false;
 
         // Проверяем что ячейка не под водой (если в туториале есть вода)
         // if (cell.IsUnderwater) return false;

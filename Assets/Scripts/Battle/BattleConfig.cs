@@ -17,13 +17,24 @@ public enum MapGenerationMode
     Flat        // Плоская карта без рельефа
 }
 
+// Тип управления командой
+public enum ControlType
+{
+    Human,      // Управление человеком
+    Computer    // Управление компьютером (ИИ)
+}
+
 // Класс для хранения конфигурации битвы
 [System.Serializable]
 public class BattleConfig
 {
     public MapSize mapSize = MapSize.Small;
-    public List<UnitData> playerUnits = new List<UnitData>();
-    public List<UnitData> enemyUnits = new List<UnitData>();
+    public List<UnitData> player1Units = new List<UnitData>();
+    public List<UnitData> player2Units = new List<UnitData>();
+
+    // Тип управления для каждой команды
+    public ControlType player1ControlType = ControlType.Human;
+    public ControlType player2ControlType = ControlType.Computer;
 
     public bool enableFogOfWar = false;
     public bool enableVisibility = false;
@@ -34,8 +45,8 @@ public class BattleConfig
     [Tooltip("Имя предсозданной карты (если используется режим Prebuilt). Карта должна быть в Resources/BattleMaps/")]
     public string prebuiltMapName = "";
 
-    public int playerUnitsCount => playerUnits.Count;
-    public int enemyUnitsCount => enemyUnits.Count;
+    public int player1UnitsCount => player1Units.Count;
+    public int player2UnitsCount => player2Units.Count;
 
     // Добавим методы для получения реальных размеров
     public int GetGridWidth()
