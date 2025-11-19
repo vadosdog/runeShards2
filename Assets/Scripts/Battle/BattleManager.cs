@@ -31,11 +31,13 @@ public class BattleManager : MonoBehaviour
         {
             // Временно: создаем тестовых юнитов
             battleConfig.playerUnits.Add(baseUnitData);
+            battleConfig.playerUnits.Add(baseUnitData);
         }
 
         if (battleConfig.enemyUnits.Count == 0)
         {
             // Временно: создаем тестовых юнитов
+            battleConfig.enemyUnits.Add(baseUnitData);
             battleConfig.enemyUnits.Add(baseUnitData);
         }
 

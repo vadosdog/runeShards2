@@ -427,6 +427,7 @@ public class BattleUI : MonoBehaviour
         // Очищаем текущее выделение при переключении режима
         ClearPath();
         ClearActionTargeting();
+        previousTrajectoryCell = null;
         
         // Обновляем подсветку кнопок
         UpdateSkillButtonsSelection();
@@ -539,6 +540,7 @@ public class BattleUI : MonoBehaviour
 	}
     
     private HexCell? previousActionTargetCell;
+    private HexCell? previousTrajectoryCell;
     
     void DoAction()
     {
@@ -586,50 +588,99 @@ public class BattleUI : MonoBehaviour
             return;
         }
         
-        if (UpdateCurrentCell())
+        // Проверяем, изменилась ли ячейка
+        if (!UpdateCurrentCell())
         {
-            if (currentCell != null)
+            ClearActionTargeting();
+            return;
+        }
+        
+        if (currentCell == null)
+        {
+            ClearActionTargeting();
+            return;
+        }
+        
+        // Выполняем проверки и показываем предпросмотр только если ячейка изменилась
+        bool cellChanged = previousActionTargetCell == null || previousActionTargetCell.Value != currentCell;
+        
+        if (cellChanged)
+        {
+            // Очищаем предыдущую подсветку, если клетка изменилась
+            if (previousActionTargetCell != null)
             {
-                // Очищаем предыдущую подсветку, если клетка изменилась
-                if (previousActionTargetCell != null && previousActionTargetCell.Value != currentCell)
-                {
-                    grid.DisableHighlight(previousActionTargetCell.Value.Index);
-                    selectedSkill.HideTargetingPreview();
-                    
-                    // Если предыдущая ячейка была ячейкой активного юнита, подсвечиваем её снова зеленым
-                    if (previousActionTargetCell.Value == selectedUnit.Location)
-                    {
-                        grid.HighlightUnitCell(selectedUnit.Location.Index);
-                    }
-                }
+                grid.DisableHighlight(previousActionTargetCell.Value.Index);
+                selectedSkill.HideTargetingPreview();
                 
-                // Проверяем, является ли клетка валидной целью для навыка
-                bool isValidTarget = selectedSkill.IsValidTarget(currentCell, selectedUnit);
-                
-                if (isValidTarget)
+                // Если предыдущая ячейка была ячейкой активного юнита, подсвечиваем её снова зеленым
+                if (previousActionTargetCell.Value == selectedUnit.Location)
                 {
-                    // Подсвечиваем валидную цель
-                    grid.HighlightCell(currentCell.Index, Color.red);
-                    selectedSkill.ShowTargetingPreview(currentCell, selectedUnit);
+                    grid.HighlightUnitCell(selectedUnit.Location.Index);
                 }
-                else
-                {
-                    // Подсвечиваем невалидную цель серым
-                    grid.HighlightCell(currentCell.Index, Color.gray);
-                    selectedSkill.HideTargetingPreview();
-                }
-                
-                previousActionTargetCell = currentCell;
+            }
+            
+            // Если навык требует прямой видимости, вычисляем траекторию
+            if (selectedSkill.requiresLineOfSight)
+            {
+                DoFindTrajectory(currentCell);
+            }
+            
+            // Проверяем, является ли клетка валидной целью для навыка (только при смене ячейки)
+            bool isValidTarget = selectedSkill.IsValidTarget(currentCell, selectedUnit);
+            
+            // Показываем предпросмотр траектории только при смене ячейки
+            if (selectedSkill.requiresLineOfSight)
+            {
+                selectedSkill.ShowTargetingPreview(currentCell, selectedUnit);
+            }
+            
+            // Логируем результат проверки цели
+            if (isValidTarget)
+            {
+                Debug.Log($"Атака возможна: {selectedUnit.name} -> {currentCell.Coordinates}");
+                // Подсвечиваем валидную цель
+                grid.HighlightCell(currentCell.Index, Color.red);
             }
             else
             {
-                ClearActionTargeting();
+                Debug.Log($"Атака невозможна: {selectedUnit.name} -> {currentCell.Coordinates}");
+                // Подсвечиваем невалидную цель серым
+                grid.HighlightCell(currentCell.Index, Color.gray);
             }
+            
+            previousActionTargetCell = currentCell;
         }
-        else
+    }
+    
+    void DoFindTrajectory(HexCell targetCell)
+    {
+        if (selectedUnit == null || targetCell == null)
         {
-            ClearActionTargeting();
+            ClearTrajectory();
+            previousTrajectoryCell = null;
+            return;
         }
+        
+        // Пересчитываем траекторию только если ячейка изменилась
+        if (previousTrajectoryCell != targetCell)
+        {
+            BattleHexGrid battleGrid = grid as BattleHexGrid;
+            if (battleGrid != null)
+            {
+                battleGrid.FindTrajectory(selectedUnit.Location, targetCell);
+            }
+            previousTrajectoryCell = targetCell;
+        }
+    }
+    
+    void ClearTrajectory()
+    {
+        BattleHexGrid battleGrid = grid as BattleHexGrid;
+        if (battleGrid != null)
+        {
+            battleGrid.ClearTrajectory();
+        }
+        previousTrajectoryCell = null;
     }
     
     void ClearActionTargeting()
@@ -649,6 +700,9 @@ public class BattleUI : MonoBehaviour
         {
             selectedSkill.HideTargetingPreview();
         }
+        
+        // Очищаем траекторию
+        ClearTrajectory();
         
         // Подсвечиваем позицию юнита, если он есть
         if (selectedUnit != null && selectedUnit.CompareTag("PlayerUnit"))
