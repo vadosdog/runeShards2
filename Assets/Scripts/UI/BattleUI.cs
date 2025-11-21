@@ -592,6 +592,9 @@ public class BattleUI : MonoBehaviour
             return;
         }
         
+        // Проигрываем анимацию атаки перед выполнением навыка
+        selectedUnit.PerformAttack();
+        
         // Выполняем навык
         SkillResult result = selectedSkill.Execute(currentCell, selectedUnit);
         
@@ -668,13 +671,11 @@ public class BattleUI : MonoBehaviour
             // Логируем результат проверки цели
             if (isValidTarget)
             {
-                Debug.Log($"Атака возможна: {selectedUnit.name} -> {currentCell.Coordinates}");
                 // Подсвечиваем валидную цель
                 grid.HighlightCell(currentCell.Index, Color.red);
             }
             else
             {
-                Debug.Log($"Атака невозможна: {selectedUnit.name} -> {currentCell.Coordinates}");
                 // Подсвечиваем невалидную цель серым
                 grid.HighlightCell(currentCell.Index, Color.gray);
             }

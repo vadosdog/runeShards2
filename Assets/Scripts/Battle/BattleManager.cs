@@ -295,20 +295,52 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // Используем БАЗОВЫЙ префаб (без специфичных настроек)
-        GameObject unitPrefab = baseUnitPrefab; // Общий префаб для всех юнитов
+        GameObject unitInstance;
+        BattleHexUnit battleUnit;
         
-        GameObject unitInstance = Instantiate(unitPrefab);
-        BattleHexUnit battleUnit = unitInstance.GetComponent<BattleHexUnit>();
+        // Создаем юнита из префаба или программно
+        if (baseUnitPrefab != null)
+        {
+            // Используем префаб, если он задан
+            unitInstance = Instantiate(baseUnitPrefab);
+            battleUnit = unitInstance.GetComponent<BattleHexUnit>();
+            
+            if (battleUnit == null)
+            {
+                Debug.LogError("Префаб юнита не содержит компонент BattleHexUnit!");
+                Destroy(unitInstance);
+                return;
+            }
+        }
+        else
+        {
+            // Создаем юнита программно (для системы карточек)
+            unitInstance = new GameObject($"Unit_{unitData.unitName}");
+            battleUnit = unitInstance.AddComponent<BattleHexUnit>();
+            
+            // Добавляем коллайдер для взаимодействия (если нужен)
+            // Можно использовать простой BoxCollider или CapsuleCollider
+            // Collider collider = unitInstance.AddComponent<CapsuleCollider>();
+            // collider.height = 2f;
+            // collider.radius = 0.5f;
+        }
         
-        // Инициализируем из UnitData
-        battleUnit.InitializeFromUnitData(unitData);
+        // Устанавливаем тег ДО инициализации, чтобы команда правильно определялась
+        unitInstance.tag = isPlayerUnit ? "Player1Unit" : "Player2Unit";
+        unitInstance.name = $"{unitData.unitName} {(isPlayerUnit ? "(Player1)" : "(Player2)")}";
+        
+        // Инициализируем из UnitData (это настроит карточку через UnitCardRenderer)
+        // Передаем информацию о том, какой это игрок (для зеркалирования игрока 2)
+        battleUnit.InitializeFromUnitData(unitData, isPlayerUnit);
         
         // Размещаем на карте
         hexGrid.AddUnit(battleUnit, cell, Random.Range(0f, 360f));
         
-        unitInstance.name = $"{unitData.unitName} {(isPlayerUnit ? "(Player)" : "(Enemy)")}";
-        unitInstance.tag = isPlayerUnit ? "PlayerUnit" : "EnemyUnit";
+        // Обновляем позицию карточки с учетом высоты гекса (после размещения)
+        if (battleUnit.cardRenderer != null)
+        {
+            battleUnit.cardRenderer.UpdatePositionWithHexElevation();
+        }
     }
 
 

@@ -10,24 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9f55d5b38ee5bd57abc89fbfdab912d, type: 3}
-  m_Name: BaseUnitData
+  m_Name: 001
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  unitName: TEST
+  unitName: "\u041F\u0438\u0440\u043E\u0445\u0432\u0430\u0442"
   emotionType: 0
-  elementType: 0
+  elementType: 1
   shapeType: 0
   unitCardSprite: {fileID: 21300000, guid: fc13ce845f4571530bbd578af596029e, type: 3}
-  cardSize: {x: 2, y: 3}
-  battlePrefab: {fileID: 1716964107277084, guid: 4a9c4706cda55f2318242fa8c416e568, type: 3}
-  maxHealth: 30
-  maxStamina: 10
-  PhyAtk: 1
-  MagAtk: 1
-  PhyDef: 1
-  MagDef: 1
-  Skills:
-  - {fileID: 11400000, guid: e75c6b898e26a005eae66f4e372652bd, type: 2}
-  - {fileID: 11400000, guid: a1cf4247ffe6f21beb5a6c63b82926d5, type: 2}
-  - {fileID: 11400000, guid: 9a786aa53b4c2492d91c6b376c012217, type: 2}
+  cardSize: {x: 2, y: 2}
+  battlePrefab: {fileID: 0}
+  maxHealth: 14
+  maxStamina: 6
+  PhyAtk: 7
+  MagAtk: 7
+  PhyDef: 9
+  MagDef: 9
+  Skills: []
   hitEffect: {fileID: 0}
   deathEffect: {fileID: 0}

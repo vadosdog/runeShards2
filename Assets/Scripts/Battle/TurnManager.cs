@@ -10,11 +10,11 @@ public class BattleTurnManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private HexGrid hexGrid;
 
-    // Списки юнитов по тегам Unity (PlayerUnit = Игрок 1, EnemyUnit = Игрок 2)
-    private List<BattleHexUnit> playerUnits = new List<BattleHexUnit>(); // Команда с тегом "PlayerUnit"
-    private List<BattleHexUnit> enemyUnits = new List<BattleHexUnit>(); // Команда с тегом "EnemyUnit"
+    // Списки юнитов по тегам Unity (Player1Unit = Игрок 1, Player2Unit = Игрок 2)
+    private List<BattleHexUnit> playerUnits = new List<BattleHexUnit>(); // Команда с тегом "Player1Unit"
+    private List<BattleHexUnit> enemyUnits = new List<BattleHexUnit>(); // Команда с тегом "Player2Unit"
 
-    private bool isPlayer1Turn = true; // true = ход команды PlayerUnit (Игрок 1), false = ход команды EnemyUnit (Игрок 2)
+    private bool isPlayer1Turn = true; // true = ход команды Player1Unit (Игрок 1), false = ход команды Player2Unit (Игрок 2)
     private BattleHexUnit currentActiveUnit;
     private int currentUnitIndex = 0;
 
@@ -24,10 +24,10 @@ public class BattleTurnManager : MonoBehaviour
     
     private BattleConfig battleConfig;
 
-    // События для UI
+        // События для UI
     public event System.Action OnUnitsInitialized;
     public event System.Action<BattleHexUnit> OnActiveUnitChanged;
-    public event System.Action<bool> OnTurnChanged; // true - Player1 (PlayerUnit), false - Player2 (EnemyUnit)
+    public event System.Action<bool> OnTurnChanged; // true - Player1 (Player1Unit), false - Player2 (Player2Unit)
 
     void Awake()
     {
@@ -51,11 +51,13 @@ public class BattleTurnManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f); // Ждем инициализации карты
 
         // Получаем конфиг из меню выбора
+        // BattleManager уже проверил конфиг, поэтому просто получаем его без повторного предупреждения
         battleConfig = BattleSettingsManager.CurrentConfig;
         if (battleConfig == null)
         {
+            // Если конфиг все еще null (что не должно происходить, если BattleManager работает правильно),
+            // создаем дефолтный, но без предупреждения, так как BattleManager уже вывел его
             battleConfig = new BattleConfig();
-            Debug.LogWarning("BattleConfig не найден, использую настройки по умолчанию");
         }
 
         FindAllUnits();
@@ -67,11 +69,11 @@ public class BattleTurnManager : MonoBehaviour
         // Определяем, с какой команды начинать (та, у которой ControlType == Human)
         if (IsTeamHumanControlled(true))
         {
-            StartPlayer1Turn(); // Начинаем ход игрока 1 (PlayerUnit)
+            StartPlayer1Turn(); // Начинаем ход игрока 1 (Player1Unit)
         }
         else
         {
-            StartPlayer2Turn(); // Начинаем ход игрока 2 (EnemyUnit)
+            StartPlayer2Turn(); // Начинаем ход игрока 2 (Player2Unit)
         }
     }
 
@@ -86,30 +88,33 @@ public class BattleTurnManager : MonoBehaviour
         {
             if (unit.IsAlive)
             {
-                if (unit.CompareTag("PlayerUnit"))
+                if (unit.CompareTag("Player1Unit"))
                     playerUnits.Add(unit);
-                else if (unit.CompareTag("EnemyUnit"))
+                else if (unit.CompareTag("Player2Unit"))
                     enemyUnits.Add(unit);
             }
         }
 
-        Debug.Log($"Найдено юнитов: {playerUnits.Count} игрок 1 (PlayerUnit), {enemyUnits.Count} игрок 2 (EnemyUnit)");
+        Debug.Log($"Найдено юнитов: {playerUnits.Count} игрок 1 (Player1Unit), {enemyUnits.Count} игрок 2 (Player2Unit)");
     }
 
     public void StartPlayer1Turn()
     {
         isPlayer1Turn = true;
         currentUnitIndex = 0;
-        currentTeam = playerUnits; // Явно устанавливаем команду PlayerUnit (Игрок 1)
+        currentTeam = playerUnits; // Явно устанавливаем команду Player1Unit (Игрок 1)
 
         // Восстанавливаем stamina всем юнитам игрока 1
         foreach (BattleHexUnit unit in playerUnits)
         {
             if (unit.IsAlive) unit.ResetStamina();
         }
+        
+        // Обновляем подсветку всех юнитов команды 1
+        UpdateAllUnitsHighlight(playerUnits, false);
 
         StartNextUnitTurn();
-        Debug.Log("=== ХОД ИГРОКА 1 (PlayerUnit) ===");
+        Debug.Log("=== ХОД ИГРОКА 1 (Player1Unit) ===");
         OnTurnChanged?.Invoke(true);
     }
 
@@ -117,16 +122,19 @@ public class BattleTurnManager : MonoBehaviour
     {
         isPlayer1Turn = false;
         currentUnitIndex = 0;
-        currentTeam = enemyUnits; // Явно устанавливаем команду EnemyUnit (Игрок 2)
+        currentTeam = enemyUnits; // Явно устанавливаем команду Player2Unit (Игрок 2)
 
         // Восстанавливаем stamina всем юнитам игрока 2
         foreach (BattleHexUnit unit in enemyUnits)
         {
             if (unit.IsAlive) unit.ResetStamina();
         }
+        
+        // Обновляем подсветку всех юнитов команды 2
+        UpdateAllUnitsHighlight(enemyUnits, false);
 
         StartNextUnitTurn();
-        Debug.Log("=== ХОД ИГРОКА 2 (EnemyUnit) ===");
+        Debug.Log("=== ХОД ИГРОКА 2 (Player2Unit) ===");
         OnTurnChanged?.Invoke(false);
     }
 
@@ -158,7 +166,7 @@ public class BattleTurnManager : MonoBehaviour
             return;
         }
 
-        // Активируем юнита
+        // Активируем юнита (SelectUnit уже обновляет подсветку)
         SelectUnit(currentUnitIndex);
 
         // Если текущая команда управляется ИИ - запускаем AI
@@ -215,12 +223,12 @@ public class BattleTurnManager : MonoBehaviour
     /// <summary>
     /// Проверяет, управляется ли указанная команда человеком
     /// </summary>
-    /// <param name="isPlayer1Team">true для PlayerUnit (Игрок 1), false для EnemyUnit (Игрок 2)</param>
+    /// <param name="isPlayer1Team">true для Player1Unit (Игрок 1), false для Player2Unit (Игрок 2)</param>
     private bool IsTeamHumanControlled(bool isPlayer1Team)
     {
         if (battleConfig == null)
         {
-            // По умолчанию: PlayerUnit = человек, EnemyUnit = ИИ (старая логика)
+            // По умолчанию: Player1Unit = человек, Player2Unit = ИИ (старая логика)
             return isPlayer1Team;
         }
         
@@ -235,7 +243,7 @@ public class BattleTurnManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Возвращает список юнитов команды Player1 (тег "PlayerUnit")
+    /// Возвращает список юнитов команды Player1 (тег "Player1Unit")
     /// </summary>
     public List<BattleHexUnit> GetPlayer1Units()
     {
@@ -243,7 +251,7 @@ public class BattleTurnManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Возвращает список юнитов команды Player2 (тег "EnemyUnit")
+    /// Возвращает список юнитов команды Player2 (тег "Player2Unit")
     /// </summary>
     public List<BattleHexUnit> GetPlayer2Units()
     {
@@ -309,18 +317,52 @@ public class BattleTurnManager : MonoBehaviour
                 {
                     currentActiveUnit.EndBattleTurn();
                 }
+                
+                // Деактивируем предыдущего активного юнита (подсветка)
+                if (currentActiveUnit != null && currentActiveUnit != unit && currentActiveUnit.cardRenderer != null)
+                {
+                    bool prevIsTeam1 = currentActiveUnit.CompareTag("Player1Unit");
+                    currentActiveUnit.cardRenderer.UpdateHighlight(prevIsTeam1, false);
+                }
 
                 // Устанавливаем нового активного юнита
                 currentActiveUnit = unit;
-                currentActiveUnit.StartBattleTurn();
+                currentActiveUnit.StartBattleTurn(); // Внутри уже вызывается UpdateHighlight()
 
                 // Обновляем индекс
                 currentUnitIndex = index;
+                
+                // Подсветка уже обновлена в StartBattleTurn(), но для уверенности обновляем еще раз
+                if (currentActiveUnit.cardRenderer != null)
+                {
+                    bool isTeam1 = currentActiveUnit.CompareTag("Player1Unit");
+                    currentActiveUnit.cardRenderer.UpdateHighlight(isTeam1, true);
+                }
 
                 Debug.Log($"Выбран юнит: {unit.name}");
 
                 // Уведомляем UI
                 OnActiveUnitChanged?.Invoke(unit);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Обновляет подсветку всех юнитов в команде
+    /// </summary>
+    /// <param name="team">Список юнитов команды</param>
+    /// <param name="active">Флаг активности (обычно false, активным становится только currentActiveUnit)</param>
+    private void UpdateAllUnitsHighlight(List<BattleHexUnit> team, bool active)
+    {
+        foreach (BattleHexUnit unit in team)
+        {
+            if (unit != null && unit.IsAlive && unit.cardRenderer != null)
+            {
+                // Определяем команду по тегу: Player1Unit = Team1, Player2Unit = Team2
+                bool isTeam1 = unit.CompareTag("Player1Unit");
+                // Активным является только текущий активный юнит
+                bool isActive = active && unit == currentActiveUnit;
+                unit.cardRenderer.UpdateHighlight(isTeam1, isActive);
             }
         }
     }
@@ -332,42 +374,27 @@ public class BattleTurnManager : MonoBehaviour
     {
         if (unit == null || !unit.IsAlive) return;
         
-        // Определяем, в какой команде находится юнит
-        List<BattleHexUnit> team = null;
-        bool isPlayer1Team = playerUnits.Contains(unit);
-        
-        if (isPlayer1Team)
+        // Находим индекс юнита в соответствующем списке
+        int index = -1;
+        if (playerUnits.Contains(unit))
         {
-            team = playerUnits;
-            // Если текущая команда не playerUnits, нужно переключиться
-            if (!isPlayer1Turn)
-            {
-                Debug.LogWarning("Попытка выбрать юнита из PlayerUnit (Игрок 1) во время хода EnemyUnit (Игрок 2)");
-                return;
-            }
+            index = playerUnits.IndexOf(unit);
         }
         else if (enemyUnits.Contains(unit))
         {
-            team = enemyUnits;
-            // Если текущая команда не enemyUnits, нужно переключиться
-            if (isPlayer1Turn)
-            {
-                Debug.LogWarning("Попытка выбрать юнита из EnemyUnit (Игрок 2) во время хода PlayerUnit (Игрок 1)");
-                return;
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Юнит не найден ни в одной из команд");
-            return;
+            index = enemyUnits.IndexOf(unit);
         }
         
-        int index = team.IndexOf(unit);
         if (index >= 0)
         {
             SelectUnit(index);
         }
+        else
+        {
+            Debug.LogWarning($"Unit {unit.name} not found in player or enemy units list");
+        }
     }
+    
     
     // Обновляем метод EndCurrentUnitTurn
     public void EndCurrentUnitTurn()
