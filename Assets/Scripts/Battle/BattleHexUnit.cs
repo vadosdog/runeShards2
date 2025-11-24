@@ -269,30 +269,53 @@ public class BattleHexUnit : HexUnit
 
         int moveCost = grid.MoveCost;
         
+        // Получаем путь и целевую позицию перед перемещением
+        List<int> path = grid.GetPath();
+        HexCell targetCell = Grid.GetCell(path[^1]);
+        Vector3 targetPosition = targetCell.Position;
+        
         // Устанавливаем анимацию движения перед перемещением
         if (cardRenderer != null)
         {
             cardRenderer.SetMoveAnimation(true);
         }
         
-        Travel(grid.GetPath());
+        Travel(path);
         ConsumeStamina(moveCost);
 
         Debug.Log($"{name} переместился. Stamina: {currentStamina}");
         
-        // После завершения перемещения возвращаемся к Idle
-        // Это будет вызвано после завершения Travel через корутину
-        StartCoroutine(ResetToIdleAfterMove());
+        // Запускаем корутину для отслеживания завершения перемещения
+        StartCoroutine(WaitForMovementComplete(targetPosition));
     }
     
-    private System.Collections.IEnumerator ResetToIdleAfterMove()
+    /// <summary>
+    /// Ожидает завершения перемещения и переключает анимацию на Idle
+    /// </summary>
+    private System.Collections.IEnumerator WaitForMovementComplete(Vector3 targetPosition)
     {
-        // Ждем завершения перемещения (примерно 1-2 секунды в зависимости от скорости)
-        yield return new WaitForSeconds(2f);
+        // Ждем, пока юнит не достигнет целевой позиции (с небольшой погрешностью)
+        float threshold = 0.1f;
+        float distance = Vector3.Distance(transform.localPosition, targetPosition);
         
+        while (distance > threshold)
+        {
+            distance = Vector3.Distance(transform.localPosition, targetPosition);
+            yield return null;
+        }
+        
+        // Дополнительно ждем один кадр, чтобы убедиться, что перемещение полностью завершено
+        yield return null;
+        
+        // Переключаем анимацию на Idle после завершения перемещения
         if (cardRenderer != null)
         {
+            Debug.Log($"{name}: Перемещение завершено, переключаю анимацию на Idle");
             cardRenderer.SetIdleAnimation();
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: cardRenderer is null, не могу переключить анимацию на Idle");
         }
     }
 
@@ -321,7 +344,8 @@ public class BattleHexUnit : HexUnit
 
         if (currentHealth <= 0)
         {
-            HandleUnitDeath();
+            // После анимации Hurt запустим анимацию Dead
+            StartCoroutine(PlayDeadSequence());
         }
         else
         {
@@ -332,7 +356,7 @@ public class BattleHexUnit : HexUnit
     
     private System.Collections.IEnumerator ResetAfterHurt()
     {
-        // Ждем завершения анимации урона (примерно 0.5 секунды)
+        // Ждем завершения анимации урона (длительность: 0.33 секунды, плюс запас на переходы)
         yield return new WaitForSeconds(0.5f);
         
         if (cardRenderer != null)
@@ -348,9 +372,31 @@ public class BattleHexUnit : HexUnit
             }
         }
     }
+    
+    /// <summary>
+    /// Последовательность анимаций при смерти: Hurt -> Dead -> удаление
+    /// </summary>
+    private System.Collections.IEnumerator PlayDeadSequence()
+    {
+        // Ждем завершения анимации Hurt (длительность: 0.33 секунды, плюс запас на переходы)
+        yield return new WaitForSeconds(0.5f);
+        
+        // Теперь запускаем анимацию Dead
+        if (cardRenderer != null)
+        {
+            cardRenderer.PlayDeadAnimation();
+        }
+        
+        // Ждем завершения анимации Dead (длительность: 1.0 секунда, плюс запас на переходы)
+        yield return new WaitForSeconds(1.2f);
+        
+        // После завершения анимации Dead обрабатываем смерть
+        HandleUnitDeath();
+    }
 
     /// <summary>
     /// Обрабатывает смерть юнита
+    /// Вызывается после завершения анимации Dead
     /// </summary>
     private void HandleUnitDeath()
     {
@@ -380,7 +426,8 @@ public class BattleHexUnit : HexUnit
 
         IsActive = false;
         
-        // Удаляем юнита
+        // Освобождаем ячейку и удаляем юнита
+        // Метод Die() уже освобождает ячейку (устанавливает location.Unit = null)
         Die();
     }
 

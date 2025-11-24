@@ -17,7 +17,10 @@ public class UnitCardRenderer : MonoBehaviour
     private UnitCardHighlight cardHighlight; // Компонент подсветки
     
     [Header("Card Settings")]
-    [SerializeField] private float cardElevation = 6f; // Высота карточки над поверхностью
+    [SerializeField] private float cardElevation = 0f; // Высота карточки над поверхностью (0 = нижний край на уровне гекса)
+    
+    // Фиксированный размер карточки для всех юнитов
+    private const float FIXED_CARD_SIZE = 2f; // Все карточки 2x2
     [SerializeField] private bool alwaysFaceCamera = true; // Всегда поворачивать карточку к камере
     [SerializeField] private float cardScaleMultiplier = 5f; // Множитель масштаба карточки (для увеличения размера)
     [SerializeField] private float maxTiltAngle = 60f; // Максимальный угол наклона карточки к камере при зуме (в градусах)
@@ -28,14 +31,43 @@ public class UnitCardRenderer : MonoBehaviour
     private UnitData unitData;
     private const string CARD_CHILD_NAME = "UnitCard";
     private const string CARD_SPRITE_NAME = "CardSprite";
+    private const string CARD_PIVOT_NAME = "CardPivot";
     
     void Awake()
     {
-        // Ищем или создаем карточку из префаба
+        // Ищем существующую карточку среди дочерних объектов
+        // Сначала проверяем прямых детей по имени
         Transform existingCard = transform.Find(CARD_CHILD_NAME);
+        
+        // Если не найдено, ищем по альтернативному имени или по компоненту
+        if (existingCard == null)
+        {
+            existingCard = transform.Find("UnitCardBase");
+        }
+        
+        if (existingCard == null)
+        {
+            // Ищем по компоненту Animator (префаб должен иметь его)
+            Animator existingAnimator = GetComponentInChildren<Animator>();
+            if (existingAnimator != null && existingAnimator.GetComponent<UnitCardAnimatorController>() != null)
+            {
+                existingCard = existingAnimator.transform;
+                // Поднимаемся до корня префаба (пока не достигнем transform)
+                while (existingCard.parent != null && existingCard.parent != transform)
+                {
+                    existingCard = existingCard.parent;
+                }
+            }
+        }
+        
         if (existingCard != null)
         {
             cardTransform = existingCard;
+            // Убеждаемся, что имя правильное
+            if (cardTransform.name != CARD_CHILD_NAME)
+            {
+                cardTransform.name = CARD_CHILD_NAME;
+            }
         }
         else
         {
@@ -96,14 +128,52 @@ public class UnitCardRenderer : MonoBehaviour
     
     /// <summary>
     /// Инициализирует компоненты карточки (SpriteRenderer, Animator, StatusEffects)
+    /// Также корректирует позиции CardPivot и CardSprite для правильной анимации смерти
     /// </summary>
     private void InitializeCardComponents()
     {
         if (cardTransform == null)
             return;
         
-        // Ищем CardSprite (основной спрайт карточки)
-        Transform cardSpriteTransform = cardTransform.Find(CARD_SPRITE_NAME);
+        // Ищем CardPivot и CardSprite
+        // Структура префаба: UnitCardBase -> CardPivot -> CardSprite
+        Transform cardPivot = cardTransform.Find(CARD_PIVOT_NAME);
+        Transform cardSpriteTransform = null;
+        
+        if (cardPivot != null)
+        {
+            cardSpriteTransform = cardPivot.Find(CARD_SPRITE_NAME);
+            
+            // ИСПРАВЛЕНИЕ: Перемещаем CardPivot вниз карточки для правильной анимации смерти
+            // В префабе CardPivot на Y=1.0 (центр), но для вращения вокруг нижнего края нужен Y=0.0
+            // CardSprite должен быть на Y=1.0 относительно CardPivot (центр спрайта на высоте 1.0, нижний край на 0.0)
+            // ВАЖНО: Это нужно исправить в самом префабе! Этот код - временное решение.
+            Vector3 pivotPos = cardPivot.localPosition;
+            if (Mathf.Approximately(pivotPos.y, 1.0f))
+            {
+                // Перемещаем CardPivot вниз на -1.0 (с Y=1.0 на Y=0.0)
+                pivotPos.y = 0.0f;
+                cardPivot.localPosition = pivotPos;
+                
+                // Перемещаем CardSprite вверх на +1.0 относительно CardPivot (с Y=0 на Y=1.0)
+                if (cardSpriteTransform != null)
+                {
+                    Vector3 spritePos = cardSpriteTransform.localPosition;
+                    if (Mathf.Approximately(spritePos.y, 0.0f))
+                    {
+                        spritePos.y = 1.0f; // Центр спрайта на высоте 1.0, нижний край на 0.0
+                        cardSpriteTransform.localPosition = spritePos;
+                    }
+                }
+            }
+        }
+        
+        // Если CardPivot не найден, ищем CardSprite рекурсивно
+        if (cardSpriteTransform == null)
+        {
+            cardSpriteTransform = FindInChildren(cardTransform, CARD_SPRITE_NAME);
+        }
+        
         if (cardSpriteTransform != null)
         {
             spriteRenderer = cardSpriteTransform.GetComponent<SpriteRenderer>();
@@ -119,7 +189,7 @@ public class UnitCardRenderer : MonoBehaviour
             }
         }
         
-        // Получаем Animator Controller
+        // Получаем Animator Controller (префаб уже должен иметь его на корневом объекте)
         animatorController = cardTransform.GetComponent<UnitCardAnimatorController>();
         if (animatorController == null)
         {
@@ -127,7 +197,7 @@ public class UnitCardRenderer : MonoBehaviour
             animatorController = cardTransform.gameObject.AddComponent<UnitCardAnimatorController>();
         }
         
-        // Получаем Status Effects
+        // Получаем Status Effects (префаб уже должен иметь его на корневом объекте)
         statusEffects = cardTransform.GetComponent<UnitCardStatusEffects>();
         if (statusEffects == null)
         {
@@ -143,6 +213,30 @@ public class UnitCardRenderer : MonoBehaviour
             // Если компонент не найден, добавляем его
             cardHighlight = highlightTarget.AddComponent<UnitCardHighlight>();
         }
+    }
+    
+    /// <summary>
+    /// Рекурсивно ищет дочерний объект по имени
+    /// </summary>
+    private Transform FindInChildren(Transform parent, string name)
+    {
+        if (parent == null || string.IsNullOrEmpty(name))
+            return null;
+            
+        // Сначала проверяем прямых детей
+        Transform found = parent.Find(name);
+        if (found != null)
+            return found;
+            
+        // Затем рекурсивно ищем в дочерних объектах
+        foreach (Transform child in parent)
+        {
+            found = FindInChildren(child, name);
+            if (found != null)
+                return found;
+        }
+        
+        return null;
     }
     
     void Start()
@@ -287,8 +381,9 @@ public class UnitCardRenderer : MonoBehaviour
             // Устанавливаем зеркалирование по оси X
             spriteRenderer.flipX = flipX;
             
-            // Устанавливаем размер карточки
-            if (data.cardSize != Vector2.zero)
+            // Устанавливаем размер карточки (принудительно 2x2 для всех юнитов)
+            Vector2 fixedCardSize = new Vector2(2f, 2f); // Фиксированный размер 2x2 для всех юнитов
+            if (fixedCardSize != Vector2.zero)
             {
                 // Вычисляем масштаб на основе размера карточки и размера спрайта
                 float spriteWidth = data.unitCardSprite.bounds.size.x;
@@ -296,8 +391,8 @@ public class UnitCardRenderer : MonoBehaviour
                 
                 if (spriteWidth > 0 && spriteHeight > 0)
                 {
-                    float scaleX = (data.cardSize.x / spriteWidth) * cardScaleMultiplier;
-                    float scaleY = (data.cardSize.y / spriteHeight) * cardScaleMultiplier;
+                    float scaleX = (fixedCardSize.x / spriteWidth) * cardScaleMultiplier;
+                    float scaleY = (fixedCardSize.y / spriteHeight) * cardScaleMultiplier;
                     
                     // Если нужно сохранять пропорции спрайта, используем единый масштаб
                     if (maintainAspectRatio)
@@ -349,7 +444,6 @@ public class UnitCardRenderer : MonoBehaviour
         // через UpdatePositionWithHexElevation()
     }
     
-    private float lastBaseY = float.MinValue; // Кешируем последнюю Y позицию базового объекта
     
     /// <summary>
     /// Обновляет позицию карточки с учетом высоты гекса
@@ -361,34 +455,25 @@ public class UnitCardRenderer : MonoBehaviour
             return;
             
         // UnitCardRenderer находится на том же GameObject, что и BattleHexUnit
-        // cardTransform - это дочерний объект для карточки
-        // Во время перемещения позиция родителя (юнита) обновляется через transform.localPosition в TravelPath()
-        // которая уже включает высоту гекса через Bezier.GetPoint
-        // Нам нужно установить локальную позицию дочернего объекта (карточки) так, чтобы Y = cardElevation
+        // cardTransform - это дочерний объект UnitCard (корневой объект префаба UnitCardBase)
+        // 
+        // Структура после инициализации (корректируется в InitializeCardComponents):
+        // - UnitCardBase (cardTransform) - корневой объект
+        // - CardPivot - localPosition.y = 0.0 (точка вращения внизу карточки для анимации смерти)
+        // - CardSprite - localPosition.y = 1.0 относительно CardPivot (центр спрайта на высоте 1.0)
+        //
+        // Логика позиционирования:
+        // - CardPivot на Y=0.0 - точка вращения внизу карточки
+        // - CardSprite на Y=1.0 относительно CardPivot - центр спрайта на высоте 1.0
+        // - Для карточки 2x2: центр спрайта на Y=1.0, нижний край на Y=0.0 относительно UnitCardBase
+        // - Чтобы нижний край был на уровне гекса (Y=0 относительно родителя), UnitCardBase должен быть на Y=0
+        // - cardElevation позволяет добавить небольшое смещение вверх, если нужно (по умолчанию 0)
         
-        // Базовая позиция родителя (юнита) уже содержит правильную высоту гекса:
-        // - При размещении: устанавливается в Location.Position (который включает высоту)
-        // - При перемещении: интерполируется через Bezier.GetPoint (который учитывает высоты гексов)
-        
-        // Локальная позиция карточки относительно родителя (юнита)
-        // X и Z должны быть 0 (карточка над юнитом), Y = cardElevation (высота над юнитом)
-        Vector3 parentPosition = transform.localPosition;
-        float targetY = cardElevation;
-        
-        // Кешируем Y позиции родителя для оптимизации
-        bool parentMoved = Mathf.Abs(lastBaseY - parentPosition.y) > 0.001f;
-        lastBaseY = parentPosition.y;
-        
-        // Обновляем локальную позицию карточки относительно родителя
         Vector3 cardLocalPosition = cardTransform.localPosition;
-        if (parentMoved || Mathf.Abs(cardLocalPosition.y - targetY) > 0.01f)
-        {
-            // Устанавливаем позицию карточки: над родителем на высоте cardElevation
-            cardLocalPosition.x = 0f;
-            cardLocalPosition.y = targetY;
-            cardLocalPosition.z = 0f;
-            cardTransform.localPosition = cardLocalPosition;
-        }
+        cardLocalPosition.x = 0f;
+        cardLocalPosition.y = cardElevation; // cardElevation = 0 по умолчанию (нижний край на уровне гекса)
+        cardLocalPosition.z = 0f;
+        cardTransform.localPosition = cardLocalPosition;
     }
     
     /// <summary>
@@ -475,6 +560,36 @@ public class UnitCardRenderer : MonoBehaviour
         {
             animatorController.PlayHurtAnimation();
             Debug.Log($"Проигрываю анимацию Hurt на юните {gameObject.name} (wasActive: {wasActive})");
+        }
+        else
+        {
+            Debug.LogError($"Не удалось включить аниматор для юнита {gameObject.name}");
+        }
+    }
+    
+    /// <summary>
+    /// Проигрывает анимацию смерти
+    /// </summary>
+    public void PlayDeadAnimation()
+    {
+        if (animatorController == null)
+        {
+            Debug.LogWarning("UnitCardRenderer: animatorController is null, cannot play dead animation");
+            return;
+        }
+        
+        // Включаем аниматор, если он был выключен
+        if (!animatorController.IsAnimatorEnabled())
+        {
+            Debug.Log($"Включаю аниматор для проигрывания анимации Dead на юните {gameObject.name}");
+            animatorController.EnableAnimator();
+        }
+        
+        // Убеждаемся, что аниматор включен перед проигрыванием
+        if (animatorController.IsAnimatorEnabled())
+        {
+            animatorController.PlayDeadAnimation();
+            Debug.Log($"Проигрываю анимацию Dead на юните {gameObject.name}");
         }
         else
         {

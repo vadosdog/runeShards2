@@ -26,11 +26,11 @@ Transform:
   m_GameObject: {fileID: 1360479397966947012}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15.70151, y: 0, z: 32.00035}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2101609818356697839}
+  - {fileID: 2104540172806602608}
   - {fileID: 6555956534079042607}
   - {fileID: 3234950428932723707}
   m_Father: {fileID: 0}
@@ -9879,11 +9879,11 @@ Transform:
   m_GameObject: {fileID: 6300595423195914992}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2009922936153585253}
+  m_Father: {fileID: 2104540172806602608}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1686688088915212417
 SpriteRenderer:
@@ -9964,3 +9964,35 @@ MonoBehaviour:
   pulseSpeed: 5
   pulseMinIntensity: 0.8
   pulseMaxIntensity: 1.2
+--- !u!1 &8247412492839619849
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2104540172806602608}
+  m_Layer: 0
+  m_Name: CardPivot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2104540172806602608
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8247412492839619849}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2101609818356697839}
+  m_Father: {fileID: 2009922936153585253}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

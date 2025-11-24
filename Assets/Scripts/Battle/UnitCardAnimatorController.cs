@@ -13,6 +13,7 @@ public class UnitCardAnimatorController : MonoBehaviour
     private const string PARAM_IS_MOVING = "IsMoving";
     private const string PARAM_IS_ATTACKING = "IsAttacking";
     private const string PARAM_IS_HURT = "IsHurt";
+    private const string PARAM_IS_DEAD = "IsDead";
     private const string PARAM_STATE = "State";
     
     // Состояния анимации
@@ -21,7 +22,8 @@ public class UnitCardAnimatorController : MonoBehaviour
         Idle = 0,
         Move = 1,
         Attack = 2,
-        Hurt = 3
+        Hurt = 3,
+        Dead = 4
     }
     
     private CardAnimationState currentState = CardAnimationState.Idle;
@@ -58,18 +60,29 @@ public class UnitCardAnimatorController : MonoBehaviour
         switch (state)
         {
             case CardAnimationState.Idle:
+                // Сначала устанавливаем все bool параметры в false
                 animator.SetBool(PARAM_IS_MOVING, false);
                 animator.SetBool(PARAM_IS_ATTACKING, false);
                 animator.SetBool(PARAM_IS_HURT, false);
+                animator.SetBool(PARAM_IS_DEAD, false);
+                // Затем устанавливаем State
                 animator.SetInteger(PARAM_STATE, (int)state);
+                // Принудительно обновляем аниматор для немедленного применения изменений
+                animator.Update(0f);
                 Debug.Log($"Установлено состояние Idle на {gameObject.name}");
                 break;
                 
             case CardAnimationState.Move:
-                animator.SetBool(PARAM_IS_MOVING, true);
+                // Сначала устанавливаем все bool параметры в false
                 animator.SetBool(PARAM_IS_ATTACKING, false);
                 animator.SetBool(PARAM_IS_HURT, false);
+                animator.SetBool(PARAM_IS_DEAD, false);
+                // Затем устанавливаем Move в true
+                animator.SetBool(PARAM_IS_MOVING, true);
+                // И наконец устанавливаем State
                 animator.SetInteger(PARAM_STATE, (int)state);
+                // Принудительно обновляем аниматор для немедленного применения изменений
+                animator.Update(0f);
                 Debug.Log($"Установлено состояние Move на {gameObject.name}");
                 break;
                 
@@ -77,6 +90,7 @@ public class UnitCardAnimatorController : MonoBehaviour
                 animator.SetBool(PARAM_IS_ATTACKING, true);
                 animator.SetBool(PARAM_IS_MOVING, false);
                 animator.SetBool(PARAM_IS_HURT, false);
+                animator.SetBool(PARAM_IS_DEAD, false);
                 animator.SetInteger(PARAM_STATE, (int)state);
                 Debug.Log($"Установлено состояние Attack на {gameObject.name}");
                 break;
@@ -85,6 +99,7 @@ public class UnitCardAnimatorController : MonoBehaviour
                 // Сначала устанавливаем все bool параметры в false
                 animator.SetBool(PARAM_IS_MOVING, false);
                 animator.SetBool(PARAM_IS_ATTACKING, false);
+                animator.SetBool(PARAM_IS_DEAD, false);
                 // Затем устанавливаем Hurt в true
                 animator.SetBool(PARAM_IS_HURT, true);
                 // И наконец устанавливаем State
@@ -92,6 +107,20 @@ public class UnitCardAnimatorController : MonoBehaviour
                 // Принудительно обновляем аниматор для немедленного применения изменений
                 animator.Update(0f);
                 Debug.Log($"Установлено состояние Hurt на {gameObject.name}");
+                break;
+                
+            case CardAnimationState.Dead:
+                // Сначала устанавливаем все bool параметры в false
+                animator.SetBool(PARAM_IS_MOVING, false);
+                animator.SetBool(PARAM_IS_ATTACKING, false);
+                animator.SetBool(PARAM_IS_HURT, false);
+                // Затем устанавливаем Dead в true
+                animator.SetBool(PARAM_IS_DEAD, true);
+                // И наконец устанавливаем State
+                animator.SetInteger(PARAM_STATE, (int)state);
+                // Принудительно обновляем аниматор для немедленного применения изменений
+                animator.Update(0f);
+                Debug.Log($"Установлено состояние Dead на {gameObject.name}");
                 break;
         }
     }
@@ -135,6 +164,39 @@ public class UnitCardAnimatorController : MonoBehaviour
         bool isHurt = animator.GetBool(PARAM_IS_HURT);
         int state = animator.GetInteger(PARAM_STATE);
         Debug.Log($"После установки Hurt - IsHurt: {isHurt}, State: {state}");
+    }
+    
+    /// <summary>
+    /// Проигрывает анимацию смерти
+    /// </summary>
+    public void PlayDeadAnimation()
+    {
+        if (animator == null)
+        {
+            Debug.LogError($"UnitCardAnimatorController: Animator is null on {gameObject.name} in PlayDeadAnimation!");
+            return;
+        }
+        
+        // Проверяем, назначен ли Animator Controller
+        if (animator.runtimeAnimatorController == null)
+        {
+            Debug.LogError($"UnitCardAnimatorController: Animator Controller не назначен на {gameObject.name}!");
+            return;
+        }
+        
+        if (!animator.enabled)
+        {
+            Debug.LogWarning($"UnitCardAnimatorController: Animator отключен на {gameObject.name}, включаю...");
+            animator.enabled = true;
+        }
+        
+        Debug.Log($"Устанавливаю состояние Dead на аниматоре {gameObject.name}. Controller: {animator.runtimeAnimatorController.name}");
+        SetAnimationState(CardAnimationState.Dead);
+        
+        // Проверяем, что параметры действительно установились
+        bool isDead = animator.GetBool(PARAM_IS_DEAD);
+        int state = animator.GetInteger(PARAM_STATE);
+        Debug.Log($"После установки Dead - IsDead: {isDead}, State: {state}");
     }
     
     /// <summary>
