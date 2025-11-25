@@ -24,6 +24,9 @@ public class BattleUI : MonoBehaviour
 
     private List<Button> unitButtons = new List<Button>();
     private List<Button> skillButtons = new List<Button>();
+    private Dictionary<BattleHexUnit, Button> unitButtonMap = new Dictionary<BattleHexUnit, Button>();
+    private Dictionary<BattleHexUnit, System.Action<BattleHexUnit>> unitHealthChangedHandlers = new Dictionary<BattleHexUnit, System.Action<BattleHexUnit>>();
+    private Dictionary<BattleHexUnit, System.Action<BattleHexUnit>> unitDiedHandlers = new Dictionary<BattleHexUnit, System.Action<BattleHexUnit>>();
     private BattleTurnManager turnManager;
     private BattleHexUnit selectedUnit;
 
@@ -119,18 +122,55 @@ public class BattleUI : MonoBehaviour
             turnManager.OnTurnChanged -= OnTurnChanged;
         }
         
-        // Отписываемся от событий юнитов
+        // Отписываемся от событий всех юнитов, связанных с кнопками
+        foreach (var kvp in unitHealthChangedHandlers)
+        {
+            if (kvp.Key != null)
+            {
+                kvp.Key.OnHealthChanged -= kvp.Value;
+            }
+        }
+        foreach (var kvp in unitDiedHandlers)
+        {
+            if (kvp.Key != null)
+            {
+                kvp.Key.OnUnitDied -= kvp.Value;
+            }
+        }
+        
+        // Отписываемся от событий выбранного юнита
         UnsubscribeFromUnitEvents();
     }
 
     private void InitializeUnitButtons()
     {
+        // Отписываемся от событий всех юнитов перед уничтожением кнопок
+        foreach (var kvp in unitHealthChangedHandlers)
+        {
+            if (kvp.Key != null)
+            {
+                kvp.Key.OnHealthChanged -= kvp.Value;
+            }
+        }
+        foreach (var kvp in unitDiedHandlers)
+        {
+            if (kvp.Key != null)
+            {
+                kvp.Key.OnUnitDied -= kvp.Value;
+            }
+        }
+        
+        // Очищаем словари
+        unitHealthChangedHandlers.Clear();
+        unitDiedHandlers.Clear();
+        
         // Очищаем панель
         foreach (Transform child in unitButtonsPanel)
         {
             Destroy(child.gameObject);
         }
         unitButtons.Clear();
+        unitButtonMap.Clear();
 
         // Получаем юнитов текущей активной команды, если она управляется человеком
         var currentTeamUnits = turnManager.GetCurrentTeamHumanControlledUnits();
@@ -156,10 +196,18 @@ public class BattleUI : MonoBehaviour
         button.onClick.AddListener(() => OnUnitButtonClick(unitIndex));
         
         unitButtons.Add(button);
+        unitButtonMap[unit] = button;
         
-        // Подписываемся на события юнита для обновления кнопки
-        unit.OnHealthChanged += (u) => UpdateUnitButtonVisual(button, u);
-        unit.OnUnitDied += (u) => OnUnitDied(u, button);
+        // Создаем обработчики событий и сохраняем ссылки для последующей отписки
+        System.Action<BattleHexUnit> healthChangedHandler = (u) => UpdateUnitButtonVisual(button, u);
+        System.Action<BattleHexUnit> unitDiedHandler = (u) => OnUnitDied(u, button);
+        
+        unit.OnHealthChanged += healthChangedHandler;
+        unit.OnUnitDied += unitDiedHandler;
+        
+        // Сохраняем обработчики для последующей отписки
+        unitHealthChangedHandlers[unit] = healthChangedHandler;
+        unitDiedHandlers[unit] = unitDiedHandler;
     }
 
     private void InitializeSkillButtons()
@@ -240,6 +288,11 @@ public class BattleUI : MonoBehaviour
             selectedUnit = null;
             // Очищаем кнопки навыков при отсутствии выбранного юнита
             InitializeSkillButtons();
+            // Обновляем подсветку кнопок юнитов (убираем подсветку)
+            if (unitButtons.Count > 0)
+            {
+                UpdateUnitButtonsSelection(null);
+            }
             return;
         }
 
@@ -259,11 +312,15 @@ public class BattleUI : MonoBehaviour
         UpdateUnitInfo(unit);
         SetUnitInfoVisible(true);
         
-        // Подсвечиваем активную кнопку
-        UpdateUnitButtonsSelection(unit);
-        
         // Обновляем кнопки навыков для нового выбранного юнита (сначала создаем кнопки)
         InitializeSkillButtons();
+        
+        // Подсвечиваем активную кнопку (после создания кнопок, если они еще не созданы)
+        // Убеждаемся, что кнопки созданы перед обновлением подсветки
+        if (unitButtons.Count > 0)
+        {
+            UpdateUnitButtonsSelection(unit);
+        }
         
         // Сбрасываем режим на Move при смене юнита (после создания кнопок, чтобы подсветка работала)
         SetActionMode(ActionMode.Move);
@@ -305,8 +362,13 @@ public class BattleUI : MonoBehaviour
 
     private void UpdateUnitButtonsSelection(BattleHexUnit selectedUnit)
     {
+        if (unitButtons.Count == 0 || turnManager == null)
+        {
+            return;
+        }
+        
         var currentTeamUnits = turnManager.GetCurrentTeamHumanControlledUnits();
-        int selectedIndex = currentTeamUnits.IndexOf(selectedUnit);
+        int selectedIndex = selectedUnit != null ? currentTeamUnits.IndexOf(selectedUnit) : -1;
         
         for (int i = 0; i < unitButtons.Count; i++)
         {
@@ -321,6 +383,12 @@ public class BattleUI : MonoBehaviour
 
     private void UpdateUnitButtonVisual(Button button, BattleHexUnit unit)
     {
+        // Проверяем, что кнопка не была уничтожена
+        if (button == null)
+        {
+            return;
+        }
+        
         // Меняем визуал кнопки в зависимости от состояния юнита
         Image buttonImage = button.GetComponent<Image>();
         if (buttonImage != null)
@@ -360,7 +428,11 @@ public class BattleUI : MonoBehaviour
 
     private void OnUnitDied(BattleHexUnit unit, Button button)
     {
-        UpdateUnitButtonVisual(button, unit);
+        // Проверяем, что кнопка не была уничтожена
+        if (button != null)
+        {
+            UpdateUnitButtonVisual(button, unit);
+        }
         
         // Если умер текущий отображаемый юнит, скрываем информацию
         if (unit == selectedUnit)
@@ -496,6 +568,12 @@ public class BattleUI : MonoBehaviour
         // При смене хода команды обновляем список кнопок юнитов
         // (важно, когда обе команды управляются человеком)
         InitializeUnitButtons();
+        
+        // После пересоздания кнопок обновляем подсветку для текущего выбранного юнита
+        if (selectedUnit != null)
+        {
+            UpdateUnitButtonsSelection(selectedUnit);
+        }
     }
 
     void DoPathfinding()

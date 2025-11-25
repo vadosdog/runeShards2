@@ -146,6 +146,104 @@ public static class BattleCalculator
 
         return mod;
     }
+
+    /// <summary>
+    /// Вычисляет количество лечения на основе эффекта, кастера и цели
+    /// Формула: max(1, power + модификаторы)
+    /// Без учета атаки кастера и защиты цели
+    /// </summary>
+    public static HealingResult CalculateHealing(AbstractSkillEffect effect, BattleHexUnit caster, BattleHexUnit target, BattleContext battleContext)
+    {
+        // Базовая формула лечения: только power (без атаки кастера)
+        int baseHealing = effect.power;
+
+        // Применяем дополнительные модификаторы
+        int modifierSum = 0;
+        modifierSum += GetHealingElementModifier(effect, caster, target);
+        modifierSum += GetHealingStatusModifiers(caster, target, effect.category);
+
+        baseHealing += modifierSum;
+
+        // Лечение не может быть меньше 1
+        baseHealing = Mathf.Max(1, baseHealing);
+
+        return new HealingResult
+        {
+            healingAmount = baseHealing,
+            source = caster,
+            target = target,
+            element = effect.elementType
+        };
+    }
+
+    /// <summary>
+    /// Стихийные модификаторы для лечения (противоположны модификаторам атаки)
+    /// Если стихия эффективна против цели в атаке, то она неэффективна для лечения
+    /// </summary>
+    private static int GetHealingElementModifier(AbstractSkillEffect effect, BattleHexUnit caster, BattleHexUnit target)
+    {
+        // Стихийность влияет только на магическое лечение
+        if (effect.category != EffectCategory.Magical)
+        {
+            return 0;
+        }
+
+        // Модификаторы лечения противоположны модификаторам атаки
+        // Если стихия эффективна против цели в атаке (+2), то она неэффективна для лечения (-2)
+        // Если стихия слаба против цели в атаке (0), то она эффективна для лечения (+2)
+        switch (effect.elementType)
+        {
+            case ElementType.Fire:
+                // Огонь эффективен против Травы в атаке → неэффективен для лечения Травы
+                if (target.elementType == ElementType.Grass) return -2;
+                // Огонь слаб против Воды в атаке → эффективен для лечения Воды
+                if (target.elementType == ElementType.Water) return +2;
+                break;
+            case ElementType.Water:
+                // Вода эффективна против Огня в атаке → неэффективна для лечения Огня
+                if (target.elementType == ElementType.Fire) return -2;
+                // Вода слаба против Травы в атаке → эффективна для лечения Травы
+                if (target.elementType == ElementType.Grass) return +2;
+                break;
+            case ElementType.Grass:
+                // Трава эффективна против Воды в атаке → неэффективна для лечения Воды
+                if (target.elementType == ElementType.Water) return -2;
+                // Трава слаба против Огня в атаке → эффективна для лечения Огня
+                if (target.elementType == ElementType.Fire) return +2;
+                break;
+            default:
+                return 0;
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Модификаторы лечения от статусов
+    /// </summary>
+    private static int GetHealingStatusModifiers(BattleHexUnit caster, BattleHexUnit target, EffectCategory category)
+    {
+        int mod = 0;
+
+        // Усиление увеличивает лечение
+        if (caster.HasStatus(StatusType.Empowered))
+        {
+            if (category == EffectCategory.Physical) mod += 1;
+            if (category == EffectCategory.Magical) mod += 1;
+        }
+
+        // Горение уменьшает магическое лечение
+        if (caster.HasStatus(StatusType.Burning) && category == EffectCategory.Magical)
+            mod -= 1;
+
+        // Отравление уменьшает физическое лечение
+        if (caster.HasStatus(StatusType.Poisoned) && category == EffectCategory.Physical)
+            mod -= 1;
+
+        // TODO: Можно добавить статусы, которые увеличивают получаемое лечение у цели
+
+        return mod;
+    }
 }
 
 public struct DamageResult
@@ -155,6 +253,15 @@ public struct DamageResult
     public BattleHexUnit target;
     public ElementType element;
 }
+
+public struct HealingResult
+{
+    public int healingAmount;
+    public BattleHexUnit source;
+    public BattleHexUnit target;
+    public ElementType element;
+}
+
 public struct BattleContext
 {
     // Добавить BattleContext (структуру), если захочешь учитывать бафы от союзников, погоду, тип местности

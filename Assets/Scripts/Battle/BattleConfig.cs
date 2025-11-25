@@ -34,7 +34,7 @@ public class BattleConfig
 
     // Тип управления для каждой команды
     public ControlType player1ControlType = ControlType.Human;
-    public ControlType player2ControlType = ControlType.Computer;
+    public ControlType player2ControlType = ControlType.Human;
 
     public bool enableFogOfWar = false;
     public bool enableVisibility = false;

@@ -353,6 +353,25 @@ public class BattleHexUnit : HexUnit
             StartCoroutine(ResetAfterHurt());
         }
     }
+
+    /// <summary>
+    /// Применяет лечение к юниту
+    /// </summary>
+    /// <param name="healing">Количество лечения</param>
+    public void Heal(int healing)
+    {
+        if (healing <= 0) return;
+
+        int oldHealth = currentHealth;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + healing);
+        int actualHealing = currentHealth - oldHealth;
+
+        // Уведомляем об изменении здоровья
+        OnHealthChanged?.Invoke(this);
+        Debug.Log($"{name} получил {actualHealing} лечения. Здоровье: {currentHealth}/{maxHealth}");
+
+        // TODO: Можно добавить визуальный эффект лечения (зеленые частицы, анимация и т.д.)
+    }
     
     private System.Collections.IEnumerator ResetAfterHurt()
     {

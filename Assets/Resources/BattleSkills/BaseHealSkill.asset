@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 365c3e41f4f96aa4da36749c6ec18c47, type: 3}
+  m_Name: BaseHealSkill
+  m_EditorClassIdentifier: Assembly-CSharp::BaseHealBattleSkill
+  skillName: Base Heal
+  description: Base Heal Skill
+  icon: {fileID: 0}
+  staminaCost: 2
+  cooldown: 0
+  targetType: 1
+  minRange: 0
+  maxRange: 5
+  requiresLineOfSight: 0
+  zones:
+  - pattern: {fileID: 11400000, guid: 5f078dceeb6cdb2fea0e1ea5c17c2d73, type: 2}
+    effects:
+    - {fileID: 11400000, guid: 8bfefff41ff755f9084281e4cd533d26, type: 2}
