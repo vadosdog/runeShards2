@@ -68,6 +68,12 @@ public class BattleHexUnit : HexUnit
         // Инициализируем карточку юнита
         SetupUnitCard(isPlayerUnit);
         
+        // Обновляем плашку здоровья после инициализации карточки
+        if (cardRenderer != null)
+        {
+            cardRenderer.UpdateHealthBar(currentHealth, maxHealth, animate: false);
+        }
+        
         // Обновляем подсветку после инициализации
         UpdateHighlight();
     }
@@ -340,6 +346,13 @@ public class BattleHexUnit : HexUnit
 
         // Уведомляем об изменении здоровья
         OnHealthChanged?.Invoke(this);
+        
+        // Обновляем плашку здоровья
+        if (cardRenderer != null)
+        {
+            cardRenderer.UpdateHealthBar(currentHealth, maxHealth, animate: true);
+        }
+        
         Debug.Log($"{name} получил {damage} урона. Здоровье: {currentHealth}");
 
         if (currentHealth <= 0)
@@ -368,6 +381,13 @@ public class BattleHexUnit : HexUnit
 
         // Уведомляем об изменении здоровья
         OnHealthChanged?.Invoke(this);
+        
+        // Обновляем плашку здоровья
+        if (cardRenderer != null)
+        {
+            cardRenderer.UpdateHealthBar(currentHealth, maxHealth, animate: true);
+        }
+        
         Debug.Log($"{name} получил {actualHealing} лечения. Здоровье: {currentHealth}/{maxHealth}");
 
         // TODO: Можно добавить визуальный эффект лечения (зеленые частицы, анимация и т.д.)

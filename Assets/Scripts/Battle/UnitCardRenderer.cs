@@ -15,6 +15,7 @@ public class UnitCardRenderer : MonoBehaviour
     private UnitCardAnimatorController animatorController;
     private UnitCardStatusEffects statusEffects;
     private UnitCardHighlight cardHighlight; // Компонент подсветки
+    private UnitHealthBar healthBar; // Плашка здоровья
     
     [Header("Card Settings")]
     [SerializeField] private float cardElevation = 0f; // Высота карточки над поверхностью (0 = нижний край на уровне гекса)
@@ -440,8 +441,55 @@ public class UnitCardRenderer : MonoBehaviour
             cardHighlight.SetActive(false); // По умолчанию неактивен
         }
         
+        // Инициализируем плашку здоровья
+        InitializeHealthBar(data);
+        
         // Позиция карточки будет установлена после размещения юнита на гексе
         // через UpdatePositionWithHexElevation()
+    }
+    
+    /// <summary>
+    /// Инициализирует плашку здоровья
+    /// </summary>
+    private void InitializeHealthBar(UnitData data)
+    {
+        if (cardTransform == null)
+            return;
+        
+        // Ищем HealthBarCanvas в дочерних объектах карточки
+        Transform healthBarCanvas = FindInChildren(cardTransform, "HealthBarCanvas");
+        if (healthBarCanvas == null)
+        {
+            Debug.LogWarning("UnitCardRenderer: HealthBarCanvas не найден в префабе карточки!");
+            return;
+        }
+        
+        // Получаем или создаем компонент UnitHealthBar
+        healthBar = healthBarCanvas.GetComponent<UnitHealthBar>();
+        if (healthBar == null)
+        {
+            healthBar = healthBarCanvas.gameObject.AddComponent<UnitHealthBar>();
+        }
+        
+        // Инициализируем плашку здоровья
+        if (healthBar != null && data != null)
+        {
+            healthBar.Initialize(data.unitName, data.maxHealth, data.maxHealth);
+        }
+    }
+    
+    /// <summary>
+    /// Обновляет плашку здоровья
+    /// </summary>
+    /// <param name="currentHealth">Текущее здоровье</param>
+    /// <param name="maxHealth">Максимальное здоровье</param>
+    /// <param name="animate">Анимировать ли изменение</param>
+    public void UpdateHealthBar(int currentHealth, int maxHealth, bool animate = true)
+    {
+        if (healthBar != null)
+        {
+            healthBar.UpdateHealth(currentHealth, animate);
+        }
     }
     
     
