@@ -471,6 +471,16 @@ public class UnitCardRenderer : MonoBehaviour
             healthBar = healthBarCanvas.gameObject.AddComponent<UnitHealthBar>();
         }
         
+        // Настраиваем Canvas для отображения плашки здоровья поверх других объектов
+        Canvas canvas = healthBarCanvas.GetComponent<Canvas>();
+        if (canvas != null)
+        {
+            // Включаем переопределение сортировки и устанавливаем высокий sorting order
+            // чтобы плашка здоровья отображалась поверх карточек юнитов (sortingOrder=100) и выделения поля
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 200; // Выше, чем у карточек юнитов (100)
+        }
+        
         // Инициализируем плашку здоровья
         if (healthBar != null && data != null)
         {

@@ -208,6 +208,9 @@ public class BattleTurnManager : MonoBehaviour
         // Проверяем, что текущая команда управляется человеком
         if (IsCurrentTeamHumanControlled() && currentActiveUnit != null)
         {
+            // Останавливаем анимацию текущего активного юнита перед завершением хода
+            currentActiveUnit.EndBattleTurn();
+            
             EndTeamTurn();
         }
     }
