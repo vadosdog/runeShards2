@@ -20,6 +20,7 @@ public class BattleSettingsManager : MonoBehaviour
     [SerializeField] private TMP_Dropdown[] player2UnitDropdowns = new TMP_Dropdown[6];
 
     [Header("Battle Settings")]
+    [SerializeField] private TMP_Dropdown victoryConditionDropdown;
     [SerializeField] private Button startBattleButton;
     [SerializeField] private Button backButton;
 
@@ -29,12 +30,21 @@ public class BattleSettingsManager : MonoBehaviour
     // Данные для передачи в сцену битвы
     public static BattleConfig CurrentConfig { get; private set; }
 
+    /// <summary>
+    /// Очищает текущую конфигурацию битвы (вызывается при возврате в главное меню)
+    /// </summary>
+    public static void ClearConfig()
+    {
+        CurrentConfig = null;
+    }
+
     void Start()
     {
         LoadAvailableUnits();
         InitializeMapSizeButtons();
         InitializeControlTypeDropdowns();
         InitializeUnitDropdowns();
+        InitializeVictoryConditionDropdown();
         InitializeActionButtons();
 
         // Установим значения по умолчанию
@@ -140,6 +150,27 @@ public class BattleSettingsManager : MonoBehaviour
                 player2UnitDropdowns[i].onValueChanged.AddListener((value) => OnPlayer2UnitChanged(index, value));
             }
         }
+    }
+
+    private void InitializeVictoryConditionDropdown()
+    {
+        if (victoryConditionDropdown != null)
+        {
+            List<string> victoryConditionOptions = new List<string> { "Полное уничтожение" };
+            victoryConditionDropdown.ClearOptions();
+            victoryConditionDropdown.AddOptions(victoryConditionOptions);
+            victoryConditionDropdown.value = 0; // По умолчанию "Полное уничтожение"
+            victoryConditionDropdown.onValueChanged.AddListener((value) => OnVictoryConditionChanged(value));
+        }
+    }
+
+    private void OnVictoryConditionChanged(int value)
+    {
+        if (CurrentConfig == null)
+            CurrentConfig = new BattleConfig();
+
+        CurrentConfig.victoryCondition = (VictoryCondition)value;
+        Debug.Log($"Режим победы: {CurrentConfig.victoryCondition}");
     }
 
     private void InitializeActionButtons()
@@ -278,6 +309,9 @@ public class BattleSettingsManager : MonoBehaviour
 
         if (player2ControlTypeDropdown != null)
             OnPlayer2ControlTypeChanged(player2ControlTypeDropdown.value);
+
+        if (victoryConditionDropdown != null)
+            OnVictoryConditionChanged(victoryConditionDropdown.value);
 
         // Применяем выбранные юниты
         if (player1UnitDropdowns[0] != null)

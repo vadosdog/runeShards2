@@ -24,6 +24,12 @@ public enum ControlType
     Computer    // Управление компьютером (ИИ)
 }
 
+// Режим победы в битве
+public enum VictoryCondition
+{
+    TotalAnnihilation  // Полное уничтожение - команда побеждает, если уничтожит всех противников
+}
+
 // Класс для хранения конфигурации битвы
 [System.Serializable]
 public class BattleConfig
@@ -35,6 +41,9 @@ public class BattleConfig
     // Тип управления для каждой команды
     public ControlType player1ControlType = ControlType.Human;
     public ControlType player2ControlType = ControlType.Human;
+
+    [Header("Victory Conditions")]
+    public VictoryCondition victoryCondition = VictoryCondition.TotalAnnihilation;
 
     public bool enableFogOfWar = false;
     public bool enableVisibility = false;

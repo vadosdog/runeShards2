@@ -25,6 +25,7 @@ MonoBehaviour:
   MagAtk: 7
   PhyDef: 9
   MagDef: 9
-  Skills: []
+  Skills:
+  - {fileID: 11400000, guid: e75c6b898e26a005eae66f4e372652bd, type: 2}
   hitEffect: {fileID: 0}
   deathEffect: {fileID: 0}
