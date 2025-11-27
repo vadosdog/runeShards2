@@ -30,6 +30,7 @@ public class UnitCardRenderer : MonoBehaviour
     private Camera mainCamera;
     private HexMapCamera hexMapCamera;
     private UnitData unitData;
+    private bool isFlippedForTeam2 = false; // Флаг для отслеживания разворота карточки для второй команды
     private const string CARD_CHILD_NAME = "UnitCard";
     private const string CARD_SPRITE_NAME = "CardSprite";
     private const string CARD_PIVOT_NAME = "CardPivot";
@@ -287,7 +288,24 @@ public class UnitCardRenderer : MonoBehaviour
         
         // Применяем наклон по оси X (поворот вверх к камере)
         Quaternion tiltRotation = Quaternion.Euler(tiltAngle, 0f, 0f);
-        cardTransform.rotation = finalHorizontalRotation * tiltRotation;
+        
+        // Вычисляем финальный поворот к камере с наклоном
+        Quaternion cameraRotation = finalHorizontalRotation * tiltRotation;
+        
+        // Учитываем разворот для второй команды (180° по оси Y)
+        if (isFlippedForTeam2)
+        {
+            // Для второй команды: разворачиваем на 180° по оси Y относительно поворота к камере
+            // Композиция кватернионов: q1 * q2 означает "сначала q2, затем q1"
+            // Поэтому: teamFlip * cameraRotation означает "сначала поворот к камере, затем разворот на 180°"
+            Quaternion teamFlip = Quaternion.Euler(0f, 180f, 0f);
+            cardTransform.rotation = teamFlip * cameraRotation;
+        }
+        else
+        {
+            // Для первой команды: просто поворачиваем к камере
+            cardTransform.rotation = cameraRotation;
+        }
     }
     
     /// <summary>
@@ -340,7 +358,7 @@ public class UnitCardRenderer : MonoBehaviour
     /// Инициализирует карточку из UnitData
     /// </summary>
     /// <param name="data">Данные юнита</param>
-    /// <param name="flipX">Зеркалировать карточку по оси X (для игрока 2)</param>
+    /// <param name="flipX">Устаревший параметр. Используется isTeam1 для определения разворота</param>
     /// <param name="isTeam1">Является ли юнит командой 1 (true) или командой 2 (false)</param>
     public void InitializeFromUnitData(UnitData data, bool flipX = false, bool isTeam1 = true)
     {
@@ -352,13 +370,17 @@ public class UnitCardRenderer : MonoBehaviour
         
         unitData = data;
         
+        // Сохраняем информацию о развороте для второй команды
+        // Разворот будет применяться в UpdateCardRotation, чтобы не конфликтовать с поворотом к камере
+        isFlippedForTeam2 = !isTeam1;
+        
         // Устанавливаем спрайт карточки
         if (data.unitCardSprite != null && spriteRenderer != null)
         {
             spriteRenderer.sprite = data.unitCardSprite;
             
-            // Устанавливаем зеркалирование по оси X
-            spriteRenderer.flipX = flipX;
+            // Больше не используем flipX, так как разворачиваем весь префаб
+            spriteRenderer.flipX = false;
             
             // Устанавливаем размер карточки (принудительно 2x2 для всех юнитов)
             Vector2 fixedCardSize = new Vector2(2f, 2f); // Фиксированный размер 2x2 для всех юнитов
@@ -409,8 +431,13 @@ public class UnitCardRenderer : MonoBehaviour
             }
         }
         
-        // Устанавливаем начальное статичное состояние (без анимаций, т.к. юнит еще неактивен)
-        SetStaticState();
+        // Устанавливаем начальное состояние Idle для всех юнитов
+        // Включаем аниматор и устанавливаем Idle анимацию
+        if (animatorController != null)
+        {
+            animatorController.EnableAnimator();
+            animatorController.SetIdleAnimation();
+        }
         
         // Настраиваем подсветку в зависимости от команды
         if (cardHighlight != null)

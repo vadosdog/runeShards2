@@ -210,10 +210,10 @@ public class BattleHexUnit : HexUnit
     {
         IsActive = false;
         
-        // Отключаем аниматор (статичное состояние) когда юнит неактивен
+        // Устанавливаем Idle анимацию при завершении хода
         if (cardRenderer != null)
         {
-            cardRenderer.SetStaticState();
+            cardRenderer.SetIdleAnimation();
         }
         
         // Обновляем подсветку при деактивации юнита
@@ -400,15 +400,8 @@ public class BattleHexUnit : HexUnit
         
         if (cardRenderer != null)
         {
-            // Возвращаем в правильное состояние: Idle для активных, статичное для неактивных
-            if (IsActive)
-            {
-                cardRenderer.SetIdleAnimation();
-            }
-            else
-            {
-                cardRenderer.SetStaticState();
-            }
+            // Всегда возвращаемся к Idle анимации после получения урона
+            cardRenderer.SetIdleAnimation();
         }
     }
     
