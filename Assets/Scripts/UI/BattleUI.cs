@@ -20,7 +20,7 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private TMP_Text staminaText;
     [SerializeField] private TMP_Text unitNameText;
     [SerializeField] private Button endTurnButton;
-	[SerializeField] BattleHexGrid grid;
+    [SerializeField] BattleHexGrid grid;
 
     private List<Button> unitButtons = new List<Button>();
     private List<Button> skillButtons = new List<Button>();
@@ -29,8 +29,9 @@ public class BattleUI : MonoBehaviour
     private Dictionary<BattleHexUnit, System.Action<BattleHexUnit>> unitDiedHandlers = new Dictionary<BattleHexUnit, System.Action<BattleHexUnit>>();
     private BattleTurnManager turnManager;
     private BattleHexUnit selectedUnit;
+    private List<BattleHexUnit> cachedHumanControlledUnits = new List<BattleHexUnit>();
 
-	HexCell currentCell;
+    HexCell currentCell;
     
     // Режим действия: Move или Action
     private ActionMode currentMode = ActionMode.Move;
@@ -58,59 +59,86 @@ public class BattleUI : MonoBehaviour
         SetUnitInfoVisible(false);
     }
     
-	void Update()
-	{
-		if (!EventSystem.current.IsPointerOverGameObject())
-		{
-			// Проверяем, что выбранный юнит управляется человеком
-			if (selectedUnit != null && turnManager != null)
-			{
-				var humanControlledUnits = turnManager.GetHumanControlledUnits();
-				if (humanControlledUnits.Contains(selectedUnit))
-				{
-					if (currentMode == ActionMode.Move)
-					{
-						// Режим перемещения
-						if (Input.GetMouseButtonDown(0))
-						{
-							DoMove();
-						}
-						else
-						{
-							DoPathfinding();
-						}
-					}
-					else if (currentMode == ActionMode.Action && selectedSkill != null)
-					{
-						// Режим действия (навык)
-						if (Input.GetMouseButtonDown(0))
-						{
-							DoAction();
-						}
-						else
-						{
-							DoActionTargeting();
-						}
-					}
-				}
-				else
-				{
-					ClearPath();
-					ClearActionTargeting();
-				}
-			}
-            else
-            {
-                ClearPath();
-                ClearActionTargeting();
-            }
-		} 
-		else
+    void Update()
+    {
+        if (EventSystem.current.IsPointerOverGameObject())
         {
-            ClearPath();
-            ClearActionTargeting();
+            ClearAllPreviews();
+            return;
         }
-	}
+
+        if (!IsHumanControlledUnitSelected())
+        {
+            ClearAllPreviews();
+            return;
+        }
+
+        HandleInput();
+    }
+
+    private void HandleInput()
+    {
+        if (currentMode == ActionMode.Move)
+        {
+            HandleMoveInput();
+        }
+        else if (currentMode == ActionMode.Action && selectedSkill != null)
+        {
+            HandleActionInput();
+        }
+    }
+
+    private void HandleMoveInput()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            DoMove();
+        }
+        else
+        {
+            DoPathfinding();
+        }
+    }
+
+    private void HandleActionInput()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            DoAction();
+        }
+        else
+        {
+            DoActionTargeting();
+        }
+    }
+
+    private bool IsHumanControlledUnitSelected()
+    {
+        if (selectedUnit == null || turnManager == null)
+            return false;
+
+        // Используем кэшированный список для производительности
+        if (cachedHumanControlledUnits == null || cachedHumanControlledUnits.Count == 0)
+        {
+            UpdateCachedHumanControlledUnits();
+        }
+
+        return cachedHumanControlledUnits.Contains(selectedUnit);
+    }
+
+    private void UpdateCachedHumanControlledUnits()
+    {
+        if (turnManager != null)
+        {
+            cachedHumanControlledUnits = turnManager.GetHumanControlledUnits();
+        }
+    }
+
+    private void ClearAllPreviews()
+    {
+        ClearPath();
+        ClearActionTargeting();
+    }
 
     void OnDestroy()
     {
@@ -297,7 +325,7 @@ public class BattleUI : MonoBehaviour
         }
 
 
-        // Зарнуляем прошлое выделение
+        // Сбрасываем прошлое выделение
         if (selectedUnit != null)
         {
             grid.DisableHighlight(selectedUnit.Location.Index);
@@ -307,6 +335,9 @@ public class BattleUI : MonoBehaviour
         selectedUnit = unit;
         unit.OnStaminaChanged += OnStaminaChanged;
         unit.OnHealthChanged += OnHealthChanged;
+        
+        // Обновляем кэш управляемых юнитов
+        UpdateCachedHumanControlledUnits();
         
         // Обновляем UI
         UpdateUnitInfo(unit);
@@ -569,6 +600,9 @@ public class BattleUI : MonoBehaviour
         // (важно, когда обе команды управляются человеком)
         InitializeUnitButtons();
         
+        // Обновляем кэш управляемых юнитов
+        UpdateCachedHumanControlledUnits();
+        
         // После пересоздания кнопок обновляем подсветку для текущего выбранного юнита
         if (selectedUnit != null)
         {
@@ -598,13 +632,9 @@ public class BattleUI : MonoBehaviour
     void ClearPath()
     {
         grid.ClearPath();
-        if (selectedUnit != null && turnManager != null)
+        if (selectedUnit != null && IsHumanControlledUnitSelected())
         {
-            var humanControlledUnits = turnManager.GetHumanControlledUnits();
-            if (humanControlledUnits.Contains(selectedUnit))
-            {
-                grid.HighlightUnitCell(selectedUnit.Location.Index);
-            }
+            grid.HighlightUnitCell(selectedUnit.Location.Index);
         }
     }
 
@@ -640,13 +670,13 @@ public class BattleUI : MonoBehaviour
 
         HexCell cell = grid.GetCell(Camera.main.ScreenPointToRay(Input.mousePosition));
         
-		if (cell)
-		{
-			currentCell = cell;
-			return true;
-		}
-		return false;
-	}
+        if (cell)
+        {
+            currentCell = cell;
+            return true;
+        }
+        return false;
+    }
     
     private HexCell? previousActionTargetCell;
     private HexCell? previousTrajectoryCell;
@@ -670,12 +700,41 @@ public class BattleUI : MonoBehaviour
             return;
         }
         
+        // Выполняем навык с визуализацией (асинхронно)
+        StartCoroutine(ExecuteSkillWithVisualization());
+    }
+
+    /// <summary>
+    /// Корутина для выполнения навыка с визуализацией
+    /// </summary>
+    private System.Collections.IEnumerator ExecuteSkillWithVisualization()
+    {
+        SkillResult result = new SkillResult
+        {
+            success = false,
+            appliedEffects = new List<SkillEffectApplication>()
+        };
+
+        // Для ближних атак добавляем задержку 0.1 секунды перед запуском анимаций
+        bool isMeleeAttack = selectedSkill is BaseMeleeBattleSkill;
+        if (isMeleeAttack)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+        
         // Проигрываем анимацию атаки перед выполнением навыка
         selectedUnit.PerformAttack();
-        
-        // Выполняем навык
-        SkillResult result = selectedSkill.Execute(currentCell, selectedUnit);
-        
+
+        // Запускаем корутину визуализации навыка
+        yield return StartCoroutine(selectedSkill.ExecuteWithVisualization(
+            currentCell,
+            selectedUnit,
+            (skillResult) =>
+            {
+                result = skillResult;
+            }
+        ));
+
         if (result.success)
         {
             Debug.Log($"Навык {selectedSkill.skillName} успешно применен!");
@@ -714,12 +773,12 @@ public class BattleUI : MonoBehaviour
         }
         
         // Выполняем проверки и показываем предпросмотр только если ячейка изменилась
-        bool cellChanged = previousActionTargetCell == null || previousActionTargetCell.Value != currentCell;
+        bool cellChanged = !previousActionTargetCell.HasValue || previousActionTargetCell.Value != currentCell;
         
         if (cellChanged)
         {
             // Очищаем предыдущую подсветку, если клетка изменилась
-            if (previousActionTargetCell != null)
+            if (previousActionTargetCell.HasValue)
             {
                 grid.DisableHighlight(previousActionTargetCell.Value.Index);
                 selectedSkill.HideTargetingPreview();
@@ -795,7 +854,7 @@ public class BattleUI : MonoBehaviour
     
     void ClearActionTargeting()
     {
-        if (previousActionTargetCell != null)
+        if (previousActionTargetCell.HasValue)
         {
             grid.DisableHighlight(previousActionTargetCell.Value.Index);
             previousActionTargetCell = null;
@@ -815,13 +874,9 @@ public class BattleUI : MonoBehaviour
         ClearTrajectory();
         
         // Подсвечиваем позицию юнита, если он есть и управляется человеком
-        if (selectedUnit != null && turnManager != null)
+        if (selectedUnit != null && IsHumanControlledUnitSelected())
         {
-            var humanControlledUnits = turnManager.GetHumanControlledUnits();
-            if (humanControlledUnits.Contains(selectedUnit))
-            {
-                grid.HighlightUnitCell(selectedUnit.Location.Index);
-            }
+            grid.HighlightUnitCell(selectedUnit.Location.Index);
         }
     }
 }

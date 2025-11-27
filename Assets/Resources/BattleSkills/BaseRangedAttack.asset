@@ -26,3 +26,5 @@ MonoBehaviour:
   - pattern: {fileID: 11400000, guid: 5f078dceeb6cdb2fea0e1ea5c17c2d73, type: 2}
     effects:
     - {fileID: 11400000, guid: 074f597e0cf41450cb5d652d8724ce0b, type: 2}
+    effectPrefab: {fileID: 1758473627833946668, guid: 33adf097f2ceeb01588de72f7d2bad91, type: 3}
+  projectilePrefab: {fileID: 6088395355541813446, guid: ac3681792e1066ba4a1c8fa4bf402724, type: 3}

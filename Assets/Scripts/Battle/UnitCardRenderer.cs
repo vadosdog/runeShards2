@@ -144,29 +144,6 @@ public class UnitCardRenderer : MonoBehaviour
         if (cardPivot != null)
         {
             cardSpriteTransform = cardPivot.Find(CARD_SPRITE_NAME);
-            
-            // ИСПРАВЛЕНИЕ: Перемещаем CardPivot вниз карточки для правильной анимации смерти
-            // В префабе CardPivot на Y=1.0 (центр), но для вращения вокруг нижнего края нужен Y=0.0
-            // CardSprite должен быть на Y=1.0 относительно CardPivot (центр спрайта на высоте 1.0, нижний край на 0.0)
-            // ВАЖНО: Это нужно исправить в самом префабе! Этот код - временное решение.
-            Vector3 pivotPos = cardPivot.localPosition;
-            if (Mathf.Approximately(pivotPos.y, 1.0f))
-            {
-                // Перемещаем CardPivot вниз на -1.0 (с Y=1.0 на Y=0.0)
-                pivotPos.y = 0.0f;
-                cardPivot.localPosition = pivotPos;
-                
-                // Перемещаем CardSprite вверх на +1.0 относительно CardPivot (с Y=0 на Y=1.0)
-                if (cardSpriteTransform != null)
-                {
-                    Vector3 spritePos = cardSpriteTransform.localPosition;
-                    if (Mathf.Approximately(spritePos.y, 0.0f))
-                    {
-                        spritePos.y = 1.0f; // Центр спрайта на высоте 1.0, нижний край на 0.0
-                        cardSpriteTransform.localPosition = spritePos;
-                    }
-                }
-            }
         }
         
         // Если CardPivot не найден, ищем CardSprite рекурсивно
@@ -338,9 +315,10 @@ public class UnitCardRenderer : MonoBehaviour
                     return Mathf.Abs(swivelAngle);
                 }
             }
-            catch
+            catch (System.Exception ex)
             {
                 // Если не удалось получить swivel, используем fallback
+                Debug.LogWarning($"Не удалось получить swivel из HexMapCamera: {ex.Message}");
             }
         }
         
@@ -515,7 +493,7 @@ public class UnitCardRenderer : MonoBehaviour
         // UnitCardRenderer находится на том же GameObject, что и BattleHexUnit
         // cardTransform - это дочерний объект UnitCard (корневой объект префаба UnitCardBase)
         // 
-        // Структура после инициализации (корректируется в InitializeCardComponents):
+        // Структура префаба UnitCardBase:
         // - UnitCardBase (cardTransform) - корневой объект
         // - CardPivot - localPosition.y = 0.0 (точка вращения внизу карточки для анимации смерти)
         // - CardSprite - localPosition.y = 1.0 относительно CardPivot (центр спрайта на высоте 1.0)

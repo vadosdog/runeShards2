@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9f55d5b38ee5bd57abc89fbfdab912d, type: 3}
   m_Name: BaseUnitData
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  unitName: TEST
+  unitName: TESTIK
   emotionType: 0
   elementType: 0
   shapeType: 0
