@@ -223,26 +223,19 @@ public abstract class AbstractBattleSkill : ScriptableObject
             GameObject effectInstance = CreateEffectInstance(zone.effectPrefab, effectPosition, effectRotation, distance);
             effectInstances.Add(effectInstance);
 
-            // Запускаем эффект
+            // Запускаем эффект без ограничения по времени
+            // Эффект будет играть до тех пор, пока ParticleSystem не завершится сам
             SkillEffectController effectController = effectInstance.GetComponent<SkillEffectController>();
             if (effectController == null)
             {
                 effectController = effectInstance.AddComponent<SkillEffectController>();
             }
-            effectController.PlayEffect(EFFECT_DURATION);
+            effectController.PlayEffect();
         }
 
-        // Ждем завершения всех эффектов
-        yield return new WaitForSeconds(EFFECT_DURATION);
-
-        // Уничтожаем все эффекты
-        foreach (var effect in effectInstances)
-        {
-            if (effect != null)
-            {
-                Destroy(effect);
-            }
-        }
+        // Не ждем завершения эффектов и не уничтожаем их автоматически
+        // Эффекты будут играть до тех пор, пока ParticleSystem не завершится сам
+        // или пока объект не будет уничтожен вручную
     }
 
     /// <summary>

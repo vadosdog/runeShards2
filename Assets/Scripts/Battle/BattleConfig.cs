@@ -4,6 +4,7 @@ using System.Collections.Generic;
 // Перечисление для размеров карты
 public enum MapSize
 {
+    DebugSmall,   // 5x5
     Small,   // 10x10
     Medium,  // 15x15
     Large    // 20x20
@@ -34,7 +35,7 @@ public enum VictoryCondition
 [System.Serializable]
 public class BattleConfig
 {
-    public MapSize mapSize = MapSize.Small;
+    public MapSize mapSize = MapSize.DebugSmall;
     public List<UnitData> player1Units = new List<UnitData>();
     public List<UnitData> player2Units = new List<UnitData>();
 
@@ -62,6 +63,7 @@ public class BattleConfig
     {
         return mapSize switch
         {
+            MapSize.DebugSmall => 5,
             MapSize.Small => 10,
             MapSize.Medium => 15,
             MapSize.Large => 20,
@@ -73,6 +75,7 @@ public class BattleConfig
     {
         return mapSize switch
         {
+            MapSize.DebugSmall => 5,
             MapSize.Small => 10,
             MapSize.Medium => 15,
             MapSize.Large => 20,

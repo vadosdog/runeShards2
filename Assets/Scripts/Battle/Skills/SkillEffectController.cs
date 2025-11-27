@@ -16,10 +16,11 @@ public class SkillEffectController : MonoBehaviour
     }
 
     /// <summary>
-    /// Запускает эффект на указанную длительность
+    /// Запускает эффект без ограничения по времени
+    /// Эффект будет играть до тех пор, пока ParticleSystem не завершится сам (если loop=false)
+    /// или пока не будет вызван StopEffect()
     /// </summary>
-    /// <param name="duration">Длительность эффекта в секундах</param>
-    public void PlayEffect(float duration)
+    public void PlayEffect()
     {
         if (isPlaying)
             return;
@@ -54,7 +55,16 @@ public class SkillEffectController : MonoBehaviour
                 ps.Play(true); // true = включая дочерние системы
             }
         }
+    }
 
+    /// <summary>
+    /// Запускает эффект на указанную длительность (устаревший метод, оставлен для совместимости)
+    /// </summary>
+    /// <param name="duration">Длительность эффекта в секундах</param>
+    [System.Obsolete("Используйте PlayEffect() без параметров для эффектов без ограничения по времени")]
+    public void PlayEffect(float duration)
+    {
+        PlayEffect();
         // Автоматически останавливаем эффект через указанное время
         StartCoroutine(StopEffectAfterDelay(duration));
     }

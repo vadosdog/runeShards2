@@ -16,6 +16,8 @@ public class UnitCardRenderer : MonoBehaviour
     private UnitCardStatusEffects statusEffects;
     private UnitCardHighlight cardHighlight; // Компонент подсветки
     private UnitHealthBar healthBar; // Плашка здоровья
+    private CardAttackAnimation cardAttackAnimation; // Компонент анимации атаки через шейдер
+    private CardHurtAnimation cardHurtAnimation; // Компонент анимации получения урона через шейдер
     
     [Header("Card Settings")]
     [SerializeField] private float cardElevation = 0f; // Высота карточки над поверхностью (0 = нижний край на уровне гекса)
@@ -191,6 +193,22 @@ public class UnitCardRenderer : MonoBehaviour
         {
             // Если компонент не найден, добавляем его
             cardHighlight = highlightTarget.AddComponent<UnitCardHighlight>();
+        }
+        
+        // Получаем или создаем компонент анимации атаки на объекте со SpriteRenderer
+        cardAttackAnimation = highlightTarget.GetComponent<CardAttackAnimation>();
+        if (cardAttackAnimation == null)
+        {
+            // Если компонент не найден, добавляем его
+            cardAttackAnimation = highlightTarget.AddComponent<CardAttackAnimation>();
+        }
+        
+        // Получаем или создаем компонент анимации получения урона на объекте со SpriteRenderer
+        cardHurtAnimation = highlightTarget.GetComponent<CardHurtAnimation>();
+        if (cardHurtAnimation == null)
+        {
+            // Если компонент не найден, добавляем его
+            cardHurtAnimation = highlightTarget.AddComponent<CardHurtAnimation>();
         }
     }
     
@@ -591,6 +609,13 @@ public class UnitCardRenderer : MonoBehaviour
     /// </summary>
     public void PlayAttackAnimation()
     {
+        // Проигрываем анимацию через шейдер (деформация в параллелограмм)
+        if (cardAttackAnimation != null)
+        {
+            cardAttackAnimation.PlayAttackAnimation();
+        }
+        
+        // Также проигрываем стандартную анимацию аниматора (если есть)
         if (animatorController != null)
         {
             animatorController.PlayAttackAnimation();
@@ -603,6 +628,13 @@ public class UnitCardRenderer : MonoBehaviour
     /// <param name="wasActive">Был ли юнит активен до урона (чтобы вернуть правильное состояние после анимации)</param>
     public void PlayHurtAnimation(bool wasActive = true)
     {
+        // Проигрываем анимацию через шейдер (деформация влево)
+        if (cardHurtAnimation != null)
+        {
+            cardHurtAnimation.PlayHurtAnimation();
+        }
+        
+        // Также проигрываем стандартную анимацию аниматора (если есть)
         if (animatorController == null)
         {
             Debug.LogWarning("UnitCardRenderer: animatorController is null, cannot play hurt animation");

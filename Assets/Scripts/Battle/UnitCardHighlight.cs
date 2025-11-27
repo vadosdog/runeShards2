@@ -69,16 +69,21 @@ public class UnitCardHighlight : MonoBehaviour
     /// </summary>
     private void CreateOutlineMaterial()
     {
-        // Загружаем шейдер
-        Shader outlineShader = Shader.Find("Custom/SpriteOutline");
-        if (outlineShader == null)
+        // Загружаем универсальный шейдер (поддерживает подсветку, атаку и hurt)
+        Shader universalShader = Shader.Find("Custom/CardUniversal");
+        if (universalShader == null)
         {
-            Debug.LogError("Shader 'Custom/SpriteOutline' not found! Make sure the shader is in the project.");
-            return;
+            // Fallback на старый шейдер, если универсальный не найден
+            universalShader = Shader.Find("Custom/SpriteOutline");
+            if (universalShader == null)
+            {
+                Debug.LogError("Shader 'Custom/CardUniversal' or 'Custom/SpriteOutline' not found! Make sure the shader is in the project.");
+                return;
+            }
         }
         
         // Создаем материал из шейдера
-        outlineMaterial = new Material(outlineShader);
+        outlineMaterial = new Material(universalShader);
         
         // Копируем текстуру из оригинального материала
         if (spriteRenderer != null && spriteRenderer.sprite != null)
@@ -89,6 +94,14 @@ public class UnitCardHighlight : MonoBehaviour
         // Устанавливаем параметры подсветки
         outlineMaterial.SetFloat("_OutlineWidth", outlineWidth);
         outlineMaterial.SetFloat("_OutlineGlow", outlineGlow);
+        
+        // Инициализируем параметры деформации нулями (если используется универсальный шейдер)
+        if (universalShader.name == "Custom/CardUniversal")
+        {
+            outlineMaterial.SetFloat("_AttackSkewAmount", 0f);
+            outlineMaterial.SetFloat("_HurtSkewAmount", 0f);
+            outlineMaterial.SetFloat("_HurtShakeAmount", 0f);
+        }
         
         // Применяем материал к SpriteRenderer
         if (spriteRenderer != null)
